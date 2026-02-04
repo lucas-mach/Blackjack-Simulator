@@ -1,5 +1,5 @@
 # Blackjack Simulator - Backend
-Backend (FastAPI + Blackjack logic)
+Basic FastAPI backend for the Blackjack card counting simulator
 
 ## Requirements
 
