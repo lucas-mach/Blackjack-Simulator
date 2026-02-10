@@ -3,10 +3,21 @@ import './App.css'
 
 function App() {
   const [output, setOutput] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleRunSimulation = () => {
-    // We will call the backend API here
-    setOutput('Future functionality here...')
+  const handleRunSimulation = async () => {
+    setLoading(true)
+    setOutput('Calling backend...')
+    
+    try {
+      const response = await fetch('http://127.0.0.1:8000/health')
+      const data = await response.json()
+      setOutput(JSON.stringify(data, null, 2))
+    } catch (error) {
+      setOutput(`Error: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
