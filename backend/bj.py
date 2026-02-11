@@ -91,13 +91,13 @@ class Game:
             raise IndexError("Invalid hand number to hit")
         self.player_hands[handnum].draw_card(self.deck.deal_card())
 
-    def dealer_play(self, Auto=True):
-        if not Auto:
-            print("Dealer's Hand:", self.dealer_hand.get_cards(), ": ", self.dealer_hand.get_value())
+    def dealer_play(self, Auto=True, output_func=None):
+        if not Auto and output_func:
+            output_func("Dealer's Hand:", self.dealer_hand.get_cards(), ": ", self.dealer_hand.get_value())
         while self.dealer_hand.should_hit():
             self.dealer_hand.draw_card(self.deck.deal_card())
-            if not Auto:
-                print("Dealer's Hand:", self.dealer_hand.get_cards(), ": ", self.dealer_hand.get_value())
+            if not Auto and output_func:
+                output_func("Dealer's Hand:", self.dealer_hand.get_cards(), ": ", self.dealer_hand.get_value())
 
     def end_game(self):
         """Clean up the game when it's done"""

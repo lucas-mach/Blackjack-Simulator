@@ -1,37 +1,51 @@
 import { useState } from 'react'
 import './App.css'
+import Terminal from './Terminal'
 
 function App() {
   const [output, setOutput] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [terminalKey, setTerminalKey] = useState(0)
 
-  const handleRunSimulation = async () => {
-    setLoading(true)
-    setOutput('Calling backend...')
-    
-    try {
-      const response = await fetch('http://127.0.0.1:8000/health')
-      const data = await response.json()
-      setOutput(JSON.stringify(data, null, 2))
-    } catch (error) {
-      setOutput(`Error: ${error.message}`)
-    } finally {
-      setLoading(false)
-    }
+  const handleRunSimulation = () => {
+    setTerminalKey(prev => prev + 1)
+    setOutput('Simulation session ' + (terminalKey + 1) + ' started...')
   }
 
   return (
-    <>
-      <h1>Welcome to the Blackjack Simulator</h1>
-      <button onClick={handleRunSimulation}>run simulation</button>
+    <div className="app-container">
+      <h1>Blackjack Simulator</h1>
+      <div className="controls">
+        <button className="run-btn" onClick={handleRunSimulation}>
+          Run Simulation
+        </button>
+      </div>
 
-      <section aria-label="Simulation output">
-        <h2>Output</h2>
-        <div className="output-container">
-          {output || 'Click \'run simulation\' above to see results.'}
+      <section className="simulation-area">
+        <div className="info-box">
+          {output || 'Click "Run Simulation" to start the terminal session.'}
+        </div>
+
+        <div className="results-link">
+          <a
+            href="http://localhost:8001/results"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Download Results (results.txt)
+          </a>
+        </div>
+
+        <div className="terminal-wrapper">
+          {terminalKey > 0 ? (
+            <Terminal key={terminalKey} />
+          ) : (
+            <div className="terminal-placeholder">
+              Terminal will appear here once simulation starts.
+            </div>
+          )}
         </div>
       </section>
-    </>
+    </div>
   )
 }
 
