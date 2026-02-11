@@ -76,6 +76,7 @@ class GameSession:
                     bet_amount = int(bet_amount_str)
                     num_decks_str = input_func("Enter number of decks: ").strip()
                     num_decks = int(num_decks_str)
+                    output_func("Playing ", num_games, " games with balance ", balance, ", bet amount ", bet_amount, ", and ", num_decks, " decks.")
                     try:
                         AutoGame.auto_play_loop(
                             num_games=num_games, 

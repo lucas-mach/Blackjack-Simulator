@@ -27,7 +27,7 @@ function App() {
 
         <div className="results-link">
           <a
-            href="http://localhost:8001/results"
+            href="http://localhost:8010/results"
             target="_blank"
             rel="noopener noreferrer"
           >

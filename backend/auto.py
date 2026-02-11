@@ -3,14 +3,28 @@ import pandas as pd
 from openpyxl import load_workbook
 
 class AutoGame:
-    def count_cards(hands):
-        """Return Hi-Lo count for a collection of hands."""
+    def count_cards(items):
+        """Return Hi-Lo count for a collection which may contain hands or raw cards."""
         total = 0
-        for hand in hands:
-            cards = getattr(hand, 'cards', hand)
-            for c in cards:
-                rank = getattr(c, 'rank', c)
-                r = str(rank)
+        # If we got a single hand, wrap it in a list
+        if not isinstance(items, list):
+            items = [items]
+            
+        for item in items:
+            if hasattr(item, 'cards'):
+                # It's a Hand object
+                item_cards = item.cards
+            elif hasattr(item, 'rank'):
+                # It's a Card object
+                item_cards = [item]
+            elif isinstance(item, list):
+                # It's already a list of cards
+                item_cards = item
+            else:
+                continue
+                
+            for c in item_cards:
+                r = str(c.rank)
                 if r in ('2', '3', '4', '5', '6'):
                     total += 1
                 elif r in ('10', 'J', 'Q', 'K', 'A'):
@@ -80,6 +94,13 @@ class AutoGame:
                 return action.lower()
 
     def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8, input_func=input, output_func=print):
+        if num_games <= 0:
+            output_func("Number of games must be at least 1.")
+            return
+        if num_decks <= 0:
+            output_func("Number of decks must be at least 1.")
+            return
+
         deck = Deck(num_decks)
         deck.shuffle()
         total_profit = 0
@@ -90,12 +111,24 @@ class AutoGame:
         strategy_path = AutoGame.determine_strategy(0)
         strategy = AutoGame.Strategy(strategy_path)
 
-        for _ in range(num_games):
-            modified_bet_amount = bet_amount * AutoGame.determine_bet_multiple(card_count/num_decks)
-            if balance < modified_bet_amount:
-                output_func("Out of money! Time to go home.")
+        for i in range(num_games):
+            if balance <= 0:
+                output_func("Out of money! Balance is 0.")
                 break
-            if modified_bet_amount == 0:
+            
+            if i > 0 and i % 1000 == 0:
+                output_func(f"Progress: {i}/{num_games} games completed. Current Balance: {balance}")
+
+            true_card_count = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
+            base_bet = bet_amount * AutoGame.determine_bet_multiple(true_card_count)
+            
+            # Bet max if money is less than bet
+            modified_bet_amount = min(base_bet, balance)
+            
+            if bet_amount == 0:
+                modified_bet_amount = 0
+            
+            if modified_bet_amount == 0 and bet_amount > 0:
                 output_func("Time to leave the table, count is too low.")
                 deck = Deck(num_decks=num_decks)
                 deck.shuffle()
@@ -103,25 +136,25 @@ class AutoGame:
                 shoe_profit = 0
                 continue
             
-            true_card_count = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
             new_strategy_path = AutoGame.determine_strategy(true_card_count)
             if new_strategy_path != strategy_path:
                 strategy_path = new_strategy_path
                 strategy = AutoGame.Strategy(strategy_path)
 
             game = deck.new_game()
-            round_result = AutoGame.played_hand(game, modified_bet_amount, balance, strategy, input_func=input_func, output_func=output_func)
+            # Pass balance MINUS initial bet to played_hand for splits/doubles
+            round_result = AutoGame.played_hand(game, modified_bet_amount, balance - modified_bet_amount, strategy, input_func=input_func, output_func=output_func)
+            
             profit = Game.interpret_result(round_result)
-            card_count += Game.interpret_card_count(round_result)
             balance += profit
             total_profit += profit
             shoe_profit += profit
             
-            # Recalculate True Count for accurate logging
-            true_card_count_log = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
+            card_count += Game.interpret_card_count(round_result)
             
+            true_card_count_log = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
             with open('results.txt', 'a') as f:
-                f.write(f"hand{_}: balance: {balance} card count: {card_count} \"True\" card count: {true_card_count_log}\n")
+                f.write(f"hand{i}: balance: {balance} card count: {card_count} \"True\" card count: {true_card_count_log}\n")
             game.end_game()
             
             if len(deck.cards) < (52 * num_decks * 0.25):
@@ -131,79 +164,75 @@ class AutoGame:
                     card_count = 0
                     shoe_profit = 0
 
-    def played_hand_split(game, bet_amount, balance, strategy, split_hand, handnum, input_func=input, output_func=print):
-        target_idx = handnum
-        if split_hand is not None:
-            game.deal_split(handnum)
-            post_len = len(game.player_hands)
-            target_idx = post_len - 1 if post_len > handnum else handnum
-            
-        target_idx = max(0, min(target_idx, len(game.player_hands) - 1))
-        hand = game.player_hands[target_idx]
-
-        while not hand.is_busted():
-            if hand.get_value() == 21:
-                break
-            action = strategy.get_action(hand, game.dealer_hand.get_card_shown_value(), splitallowed=False)
-            if action == 'h':
-                game.player_hit(handnum=target_idx)
-                hand = game.player_hands[target_idx]
-            elif action == 's':
-                break
-            elif action == 'd' and hand.num_cards() == 2 and balance >= bet_amount:
-                game.player_hit(handnum=target_idx)
-                bet_amount *= 2
-                break
-        return (game.player_hands[target_idx], bet_amount)
-
     def played_hand(game, bet_amount, balance, strategy, input_func=input, output_func=print):
-        game.new_hand()
-        dealer_hand = game.dealer_hand
         game.deal_initial()
-        player_hand = game.player_hands[0]
-        if player_hand.blackjack():
-            if dealer_hand.blackjack():
-                return ("P", bet_amount, AutoGame.count_cards([player_hand, dealer_hand]))
-            return ("W!", bet_amount, AutoGame.count_cards([player_hand, dealer_hand]))
-
-        if dealer_hand.blackjack():
-            return ("L", bet_amount, AutoGame.count_cards([player_hand, dealer_hand]))
+        dealer_hand = game.dealer_hand
         
-        while not player_hand.is_busted():
-            if player_hand.get_value() == 21:
-                action = 's'
-            else:
-                action = strategy.get_action(player_hand, dealer_hand.get_card_shown_value(), splitallowed=True)
+        # Initial Blackjack check
+        if game.player_hands[0].blackjack():
+            if dealer_hand.blackjack():
+                return ("P", bet_amount, AutoGame.count_cards([game.player_hands[0], dealer_hand]))
+            return ("W!", bet_amount, AutoGame.count_cards([game.player_hands[0], dealer_hand]))
+        if dealer_hand.blackjack():
+            return ("L", bet_amount, AutoGame.count_cards([game.player_hands[0], dealer_hand]))
 
-            if action == 'h':
-                game.player_hit(handnum=0)
-                player_hand = game.player_hands[0]
-                if player_hand.is_busted():
-                    return ("L", bet_amount, AutoGame.count_cards([player_hand, dealer_hand]))
-                continue
-            elif action == 's':
-                game.dealer_play()
-                result = game.get_winner(0)
-                return (result, bet_amount, AutoGame.count_cards([player_hand, dealer_hand]))
-            elif action == 'd' and player_hand.num_cards() == 2 and balance >= bet_amount:
-                bet_amount *= 2
-                game.player_hit(handnum=0)
-                player_hand = game.player_hands[0]
-                if player_hand.is_busted():
-                    return ("L", bet_amount, AutoGame.count_cards([player_hand, dealer_hand]))
-                game.dealer_play()
-                result = game.get_winner(0)
-                return (result, bet_amount, AutoGame.count_cards([player_hand, dealer_hand]))
-            elif action == 'v' and player_hand.can_split() and balance >= bet_amount:
-                seed_left = player_hand.cards[0]
-                seed_right = player_hand.cards[1]
-                game.new_hand()
-                h1, b1 = AutoGame.played_hand_split(game, bet_amount, balance=balance-bet_amount, strategy=strategy, split_hand=seed_left, handnum=0, input_func=input_func, output_func=output_func)
-                h2, b2 = AutoGame.played_hand_split(game, bet_amount, balance=balance-bet_amount, strategy=strategy, split_hand=seed_right, handnum=1, input_func=input_func, output_func=output_func)
-                game.dealer_play()
-                game.player_hands[0] = h1
-                game.player_hands[1] = h2
-                r1 = game.get_winner(0)
-                r2 = game.get_winner(1)
-                return [(r1, b1, AutoGame.count_cards([h1, h2, dealer_hand])), (r2, b2, 0)]
-        return ("E", bet_amount, 0)
+        bets = [bet_amount]
+        played_indices = []
+        
+        # Iteratively play all player hands (supports multiple splits)
+        i = 0
+        while i < len(game.player_hands):
+            hand = game.player_hands[i]
+            current_bet = bets[i]
+            
+            while not hand.is_busted():
+                if hand.get_value() >= 21:
+                    break
+                    
+                # Action based on strategy
+                action = strategy.get_action(hand, dealer_hand.get_card_shown_value(), splitallowed=(len(game.player_hands) < 4))
+                
+                if action == 'h':
+                    game.player_hit(handnum=i)
+                elif action == 's':
+                    break
+                elif action == 'd' and hand.num_cards() == 2 and balance >= current_bet:
+                    game.player_hit(handnum=i)
+                    bets[i] *= 2
+                    break
+                elif action == 'v' and hand.can_split() and balance >= current_bet:
+                    balance -= current_bet
+                    game.deal_split(i)
+                    # When we split, the current hand 'i' gets a new card, and a new hand is at i+1
+                    bets.insert(i + 1, current_bet)
+                    # Continue playing the current hand i
+                    continue
+                else:
+                    # Fallback to stand if something is wrong
+                    break
+            i += 1
+            
+        # Dealer plays if any hand isn't busted
+        any_active = any(not h.is_busted() for h in game.player_hands)
+        if any_active:
+            game.dealer_play(Auto=True)
+            
+        # Collect results
+        results = []
+        total_count = 0
+        for idx, h in enumerate(game.player_hands):
+            res = game.get_winner(idx)
+            cnt = 0
+            if idx == 0:
+                # Only count dealer cards once
+                total_cards = []
+                for ph in game.player_hands:
+                    total_cards.extend(ph.cards)
+                total_cards.extend(dealer_hand.cards)
+                total_count = AutoGame.count_cards(total_cards)
+                cnt = total_count
+            results.append((res, bets[idx], cnt))
+            
+        if len(results) == 1:
+            return results[0]
+        return results

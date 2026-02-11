@@ -7,9 +7,14 @@ const Terminal = () => {
     const [connected, setConnected] = useState(false);
     const ws = useRef(null);
     const messagesEndRef = useRef(null);
+    const inputRef = useRef(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    const handleContainerClick = () => {
+        inputRef.current?.focus();
     };
 
     useEffect(() => {
@@ -17,8 +22,8 @@ const Terminal = () => {
     }, [messages]);
 
     useEffect(() => {
-        // Backend now runs on 8001
-        ws.current = new WebSocket("ws://localhost:8001/ws/game");
+        // Backend now runs on 8010
+        ws.current = new WebSocket("ws://localhost:8010/ws/game");
 
         ws.current.onopen = () => {
             console.log("Connected to WebSocket");
@@ -58,7 +63,7 @@ const Terminal = () => {
     };
 
     return (
-        <div className="terminal-container">
+        <div className="terminal-container" onClick={handleContainerClick}>
             <div className="terminal-output">
                 {messages.map((msg, i) => (
                     <div key={i} className="terminal-line">
@@ -70,6 +75,7 @@ const Terminal = () => {
             <form onSubmit={handleSubmit} className="terminal-input-form">
                 <span className="terminal-prompt">&gt;</span>
                 <input
+                    ref={inputRef}
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
