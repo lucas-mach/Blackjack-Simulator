@@ -6,6 +6,7 @@ import threading
 import queue
 import asyncio
 import os
+from engine import simulate_hand
 
 app = FastAPI(title="Blackjack Simulator API")
 
@@ -110,3 +111,8 @@ class GameSession:
 async def websocket_endpoint(websocket: WebSocket):
     session = GameSession(websocket)
     await session.start()
+
+@app.post("/simulate-hand")
+def simulate_single_hand():
+    result = simulate_hand()
+    return result
