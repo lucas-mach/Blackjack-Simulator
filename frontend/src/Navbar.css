@@ -1,0 +1,55 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: #222;
+  padding: 0 1.5rem;
+  height: 60px;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+.navbar-brand {
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.navbar-items {
+  list-style: none;
+  display: flex;
+  margin: 0; /* align items to the left, next to brand */
+  padding: 0;
+}
+
+.navbar-items li {
+  margin-left: 1.5rem;
+  cursor: pointer;
+  position: relative;
+  padding: 0.5rem 0;
+  transition: color 0.2s;
+}
+
+.navbar-items li:hover {
+  color: #00acee;
+}
+
+.navbar-items li .active,
+.navbar-items li .active:link,
+.navbar-items li .active:visited {
+  color: #00acee;
+}
+
+.navbar-items li .active::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #00acee;
+}
