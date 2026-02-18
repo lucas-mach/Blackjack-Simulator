@@ -2,6 +2,7 @@
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
+  padding-top: 80px; /* account for fixed navbar */
   text-align: center;
   color: #fff;
 }
