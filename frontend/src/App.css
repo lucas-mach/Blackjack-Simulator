@@ -8,7 +8,10 @@
 }
 
 .controls {
-  margin: 20px 0;
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
 }
 
 .run-btn {
@@ -35,7 +38,7 @@
   border: 1px solid #333;
   padding: 15px;
   border-radius: 4px;
-  margin-bottom: 20px;
+  margin: 1rem auto;
   color: #00ff00;
   font-family: monospace;
 }
