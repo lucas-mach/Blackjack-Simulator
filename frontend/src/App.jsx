@@ -15,41 +15,11 @@ function App() {
     setOutput('Simulation session ' + (terminalKey + 1) + ' started...')
   }
 
-  // keep original UI in a variable so we can route to it
-  const interactivePage = (
-    <div className="app-container">
-      <h1>Blackjack Simulator</h1>
-      <div className="controls">
-        <button className="run-btn" onClick={handleRunSimulation}>
-          Run Interactive Simulation (WebSocket)
-        </button>
-      </div>
-
-      <section className="simulation-area">
-        <div className="info-box">
-          {output || 'Click "Run Simulation" to start the terminal session.'}
-        </div>
-
-        <div className="results-link">
-          <a
-            href="http://localhost:8010/results"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Download Results (results.txt)
-          </a>
-        </div>
-
-        <div className="terminal-wrapper">
-          {terminalKey > 0 ? (
-            <Terminal key={terminalKey} />
-          ) : (
-            <div className="terminal-placeholder">
-              Terminal will appear here once simulation starts.
-            </div>
-          )}
-        </div>
-      </section>
+  // Dashboard page
+  const dashboardPage = (
+    <div className="app-container" style={{ textAlign: 'center', paddingTop: '100px' }}>
+      <h1 style={{ fontSize: '48px', color: '#00ff00' }}>Incoming Dashboard</h1>
+      <p style={{ fontSize: '20px', color: '#ddd', marginTop: '20px' }}>Dashboard features coming soon...</p>
     </div>
   )
 
@@ -59,8 +29,7 @@ function App() {
       <Routes>
         <Route path="/simulation" element={<Simulation />} />
         <Route path="/trainer" element={<Trainer />} />
-        {/* keep original simulator UI available at root for now */}
-        <Route path="/" element={interactivePage} />
+        <Route path="/" element={dashboardPage} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

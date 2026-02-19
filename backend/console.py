@@ -24,7 +24,7 @@ class ConsoleGame:
             bet = -1
             while bet < 0:
                 try:
-                    output_func("Current Balance:", balance)
+                    output_func({'type': 'state', 'balance': balance})
                     try:
                         bet_str = input_func("Enter bet: ")
                         if bet_str is None: # Handle disconnect
@@ -43,22 +43,28 @@ class ConsoleGame:
                 
             game = deck.new_game()
             round_result = ConsoleGame.played_hand(game, bet, balance, input_func=input_func, output_func=output_func)
-            if round_result[0] == 'W' or round_result[0] == 'W!' :
-                output_func("Round Result: Win")
-            elif round_result[0] == 'L' :
-                output_func("Round Result: Loss")
-            elif round_result[0] == 'P' :
-                output_func("Round Result: Push")
-            elif isinstance(round_result, list) and len(round_result) > 1:
-                output_func("Round Result: Split Hands")
-                output_func("Hands Results:")
+            # Emit structured result event
+            try:
+                profit = Game.interpret_result(round_result)
+            except Exception:
+                profit = 0
+
+            if isinstance(round_result, list):
+                outcomes = []
                 for res in round_result:
-                    if res[0] == 'W' or res[0] == 'W!' :
-                        output_func("Win")
-                    elif res[0] == 'L' :
-                        output_func("Loss")
-                    elif res[0] == 'P' :
-                        output_func("Push")
+                    r = res[0] if isinstance(res, (list, tuple)) else res
+                    outcomes.append(r)
+                output_func({'type': 'result', 'outcome': 'split', 'outcomes': outcomes, 'profit': profit})
+            else:
+                r = round_result[0] if isinstance(round_result, (list, tuple)) else round_result
+                if r == 'W' or r == 'W!':
+                    output_func({'type': 'result', 'outcome': 'win', 'profit': profit})
+                elif r == 'L':
+                    output_func({'type': 'result', 'outcome': 'loss', 'profit': profit})
+                elif r == 'P':
+                    output_func({'type': 'result', 'outcome': 'push', 'profit': profit})
+                else:
+                    output_func({'type': 'result', 'outcome': str(r), 'profit': profit})
             card_count += ConsoleGame.interpret_count_from_result(round_result)
             true_count = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
             output_func("Card Count: ", card_count)
@@ -94,21 +100,23 @@ class ConsoleGame:
 
         while not hand.is_busted():
             if hand.get_value() == 21:
-                output_func("Player's Hand:", hand.get_cards())
-                output_func("21: no more action")
+                output_func({'type': 'hand', 'owner': 'player', 'cards': hand.get_cards_structured(), 'value': hand.get_value()})
+                output_func('21: no more action')
                 break
             if hand.has_soft_ace():
                 msg = f"{hand.get_value() - 10}, {hand.get_value()}"
             else:
                 msg = f"{hand.get_value()}"
-            output_func("Player's Hand:", hand.get_cards(), "\nValue:", msg)
-            valid_actions = ["h: Hit", "s: Stand"]
+            output_func({'type': 'hand', 'owner': 'player', 'cards': hand.get_cards_structured(), 'value': hand.get_value()})
+            output_func(f"Value: {msg}")
+            actions = []
+            actions.append({'code': 'h', 'label': 'Hit'})
+            actions.append({'code': 's', 'label': 'Stand'})
             if hand.num_cards() == 2 and balance >= bet_amount:
-                valid_actions.append("d: Double Down")
+                actions.append({'code': 'd', 'label': 'Double Down'})
             if hand.can_split() and family_splits.get(family_id, 0) < max_splits and balance >= bet_amount:
-                valid_actions.append("v: Split")
-            
-            output_func(f"Choose your Action ({', '.join(valid_actions)})")
+                actions.append({'code': 'v', 'label': 'Split'})
+            output_func({'type': 'actions', 'actions': actions})
             action_input = input_func()
             if action_input is None: return (hand, bet_amount) # Handle disconnect
             action = action_input.strip().lower()
@@ -116,6 +124,8 @@ class ConsoleGame:
             if action == 'h':
                 game.player_hit(handnum=handnum)
                 hand = game.player_hands[handnum]
+                # emit updated player hand so frontend sees the new card
+                output_func({'type': 'hand', 'owner': 'player', 'cards': hand.get_cards_structured(), 'value': hand.get_value()})
                 if hand.is_busted():
                     break
                 continue
@@ -125,6 +135,8 @@ class ConsoleGame:
                 game.player_hit(handnum=handnum)
                 bet_amount *= 2
                 hand = game.player_hands[handnum]
+                # emit updated player hand after double down
+                output_func({'type': 'hand', 'owner': 'player', 'cards': hand.get_cards_structured(), 'value': hand.get_value()})
                 break
             elif action == 'v' and hand.can_split() and family_splits.get(family_id, 0) < max_splits:
                 game.deal_split(handnum)
@@ -152,14 +164,29 @@ class ConsoleGame:
         player_hand = game.player_hands[0]
 
         while not player_hand.is_busted():
-            output_func("Dealer's Hand:", dealer_hand.get_card_shown())
+            # Send dealer shown card (structured) with suit name and value
+            if getattr(dealer_hand, 'cards', None) and len(dealer_hand.cards) > 0:
+                shown = dealer_hand.cards[0]
+                suit_map = {'♤': 'Spades', '♡': 'Hearts', '♧': 'Clubs', '♢': 'Diamonds'}
+                suit_name = suit_map.get(shown.suit, str(shown.suit))
+                try:
+                    card_value = shown.get_value()
+                except Exception:
+                    card_value = None
+                # indicate that dealer has a facedown card when more than one card exists
+                face_down = len(dealer_hand.cards) > 1
+                output_func({'type': 'card_shown', 'card': {'rank': shown.rank, 'suit': suit_name, 'value': card_value}, 'faceDown': face_down})
+            else:
+                output_func({'type': 'card_shown', 'card': None})
             if player_hand.has_soft_ace():
                 msg = f"{player_hand.get_value() - 10}, {player_hand.get_value()}"
             else:
                 msg = f"{player_hand.get_value()}"
-            output_func("Player's Hand:", player_hand.get_cards(), "\nValue:", msg)
+            output_func({'type': 'hand', 'owner': 'player', 'cards': player_hand.get_cards_structured(), 'value': player_hand.get_value()})
+            output_func(f"Value: {msg}")
             if player_hand.get_value() == 21 and player_hand.num_cards() == 2:
-                dealer_hand.show_cards() # Needs refactor for output_func in bj.py eventually
+                # send dealer full hand
+                output_func({'type': 'hand', 'owner': 'dealer', 'cards': dealer_hand.get_cards_structured(), 'value': dealer_hand.get_value()})
                 if dealer_hand.blackjack():
                     output_func("Push!")
                     return ("P", bet_amount, ConsoleGame.count_cards([player_hand, dealer_hand]))
@@ -167,6 +194,8 @@ class ConsoleGame:
                 return ("W!", bet_amount, ConsoleGame.count_cards([player_hand, dealer_hand]))
 
             if dealer_hand.blackjack():
+                # send dealer full hand before announcing result
+                output_func({'type': 'hand', 'owner': 'dealer', 'cards': dealer_hand.get_cards_structured(), 'value': dealer_hand.get_value()})
                 output_func("Dealer has Blackjack! You lose!")
                 return ("L", bet_amount, ConsoleGame.count_cards([player_hand, dealer_hand]))
 
@@ -174,13 +203,14 @@ class ConsoleGame:
                 output_func("21: no more action")
                 action = 's'
             else:
-                valid_actions = ["h: Hit", "s: Stand"]
+                actions = []
+                actions.append({'code': 'h', 'label': 'Hit'})
+                actions.append({'code': 's', 'label': 'Stand'})
                 if player_hand.num_cards() == 2 and balance >= bet_amount:
-                    valid_actions.append("d: Double Down")
+                    actions.append({'code': 'd', 'label': 'Double Down'})
                 if player_hand.can_split() and family_splits.get(family_for_hand.get(player_hand, 0), 0) < ConsoleGame.MAX_SPLITS and balance >= bet_amount:
-                    valid_actions.append("v: Split")
-                
-                output_func(f"Choose Action ({', '.join(valid_actions)})")
+                    actions.append({'code': 'v', 'label': 'Split'})
+                output_func({'type': 'actions', 'actions': actions})
                 action_input = input_func()
                 if action_input is None: return ("E", bet_amount) # Handle disconnect
                 action = action_input.strip().lower()
@@ -188,26 +218,34 @@ class ConsoleGame:
             if action == 'h':
                 game.player_hit(handnum=0)
                 player_hand = game.player_hands[0]
+                # emit updated player hand so frontend sees the new card
+                output_func({'type': 'hand', 'owner': 'player', 'cards': player_hand.get_cards_structured(), 'value': player_hand.get_value()})
                 if player_hand.is_busted():
+                    # reveal dealer full hand before returning so frontend can show it
+                    output_func({'type': 'hand', 'owner': 'dealer', 'cards': dealer_hand.get_cards_structured(), 'value': dealer_hand.get_value()})
                     output_func("Player busted!")
                     return ("L", bet_amount, ConsoleGame.count_cards([player_hand, dealer_hand]))
                 continue
             elif action == 's':
                 game.dealer_play(Auto=False, output_func=output_func)
                 result = game.get_winner(0)
-                output_func("Dealer Hand:", dealer_hand.get_cards())
+                output_func({'type': 'hand', 'owner': 'dealer', 'cards': dealer_hand.get_cards_structured(), 'value': dealer_hand.get_value()})
                 output_func(result)
                 return (result, bet_amount, ConsoleGame.count_cards([player_hand, dealer_hand]))
             elif action == 'd' and player_hand.num_cards() == 2 and balance >= bet_amount:
                 bet_amount *= 2
                 game.player_hit(handnum=0)
                 player_hand = game.player_hands[0]
+                # emit updated player hand after double down
+                output_func({'type': 'hand', 'owner': 'player', 'cards': player_hand.get_cards_structured(), 'value': player_hand.get_value()})
                 if player_hand.is_busted():
+                    # reveal dealer full hand before returning so frontend can show it
+                    output_func({'type': 'hand', 'owner': 'dealer', 'cards': dealer_hand.get_cards_structured(), 'value': dealer_hand.get_value()})
                     output_func("Player busted after doubling down!")
                     return ("L", bet_amount, ConsoleGame.count_cards([player_hand, dealer_hand]))
                 game.dealer_play(Auto=False, output_func=output_func)
                 result = game.get_winner(0)
-                output_func("Dealer Hand:", dealer_hand.get_cards())
+                output_func({'type': 'hand', 'owner': 'dealer', 'cards': dealer_hand.get_cards_structured(), 'value': dealer_hand.get_value()})
                 output_func(result)
                 return (result, bet_amount, ConsoleGame.count_cards([player_hand, dealer_hand]))
             elif action == 'v' and player_hand.can_split() and balance >= bet_amount:
@@ -249,7 +287,7 @@ class ConsoleGame:
                             bets[idx] = bet_amount
                     played_indices.add(next_idx)
                 game.dealer_play(Auto=False, output_func=output_func)
-                output_func("Dealer Hand:", dealer_hand.get_cards())
+                output_func({'type': 'hand', 'owner': 'dealer', 'cards': dealer_hand.get_cards_structured(), 'value': dealer_hand.get_value()})
                 out_results = []
                 for idx, h in enumerate(game.player_hands):
                     if family_for_hand.get(h) == family_id:
