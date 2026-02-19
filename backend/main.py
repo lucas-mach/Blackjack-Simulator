@@ -9,6 +9,7 @@ import queue
 import asyncio
 import os
 from engine import simulate_hand
+import json
 
 app = FastAPI(title="Blackjack Simulator API")
 
@@ -85,8 +86,12 @@ class GameSession:
 
     def run_game(self):
         def input_func(prompt=""):
+            # send a structured prompt message to the client
             if prompt:
-                self.send_message(prompt)
+                try:
+                    self.send_message(json.dumps({'type': 'prompt', 'text': prompt}))
+                except Exception:
+                    self.send_message(prompt)
             while self.is_active:
                 try:
                     return self.input_queue.get(timeout=0.5)
@@ -95,10 +100,23 @@ class GameSession:
             return "quit"
 
         def output_func(*args, **kwargs):
+            # Accept either a single dict (structured event) or plain text args
             if not self.is_active:
                 return
-            msg = " ".join(map(str, args))
-            self.send_message(msg)
+            try:
+                if len(args) == 1 and isinstance(args[0], dict):
+                    payload = args[0]
+                    self.send_message(json.dumps(payload))
+                else:
+                    msg = " ".join(map(str, args))
+                    self.send_message(json.dumps({'type': 'text', 'text': msg}))
+            except Exception:
+                # Fallback to plain text send
+                try:
+                    msg = " ".join(map(str, args))
+                    self.send_message(msg)
+                except Exception:
+                    pass
 
         try:
             output_func("Welcome to Blackjack!")

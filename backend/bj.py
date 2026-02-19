@@ -143,6 +143,15 @@ class PlayerHand:
         for card in self.cards:
             output += f"{card.rank} of {card.suit} "
         return output.strip()
+    def get_cards_structured(self):
+        # Map suit symbols to names for the frontend filenames
+        suit_map = {'♤': 'Spades', '♡': 'Hearts', '♧': 'Clubs', '♢': 'Diamonds'}
+        out = []
+        for card in self.cards:
+            suit_raw = card.suit
+            suit_name = suit_map.get(suit_raw, str(suit_raw))
+            out.append({'rank': card.rank, 'suit': suit_name})
+        return out
     def show_cards(self):
         print(self.get_cards())
     def can_split(self):
