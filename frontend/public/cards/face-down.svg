@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 420">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+      }
+
+      .cls-2 {
+        fill: #ce2029;
+      }
+
+      .cls-3 {
+        fill: url(#New_Pattern_3);
+      }
+
+      .cls-4 {
+        fill: #fbfffe;
+      }
+
+      .cls-5 {
+        fill: #f47a94;
+      }
+    </style>
+    <pattern id="New_Pattern_3" data-name="New Pattern 3" x="0" y="0" width="65" height="76" patternTransform="translate(-792.5 -341)" patternUnits="userSpaceOnUse" viewBox="0 0 65 76">
+      <g>
+        <rect class="cls-1" width="65" height="76"/>
+        <g>
+          <polygon class="cls-5" points="65 76 48.75 57 65 38 81.25 57 65 76"/>
+          <polygon class="cls-2" points="48.75 57 65 76 48.75 95 32.5 76 48.75 57"/>
+        </g>
+        <g>
+          <polygon class="cls-5" points="0 76 -16.25 57 0 38 16.25 57 0 76"/>
+          <polygon class="cls-2" points="16.25 95 0 76 16.25 57 32.5 76 16.25 95"/>
+        </g>
+        <g>
+          <polygon class="cls-5" points="32.5 38 16.25 19 32.5 0 48.75 19 32.5 38"/>
+          <polygon class="cls-2" points="48.75 57 32.5 38 48.75 19 65 38 48.75 57"/>
+          <polygon class="cls-5" points="32.5 38 48.75 57 32.5 76 16.25 57 32.5 38"/>
+          <polygon class="cls-2" points="16.25 19 32.5 38 16.25 57 0 38 16.25 19"/>
+        </g>
+        <g>
+          <polygon class="cls-5" points="65 0 81.25 19 65 38 48.75 19 65 0"/>
+          <polygon class="cls-2" points="48.75 -19 65 0 48.75 19 32.5 0 48.75 -19"/>
+        </g>
+        <g>
+          <polygon class="cls-2" points="16.25 19 0 0 16.25 -19 32.5 0 16.25 19"/>
+          <polygon class="cls-5" points="0 0 16.25 19 0 38 -16.25 19 0 0"/>
+        </g>
+      </g>
+    </pattern>
+  </defs>
+  <rect class="cls-4" width="300" height="420" rx="20" ry="20"/>
+  <rect class="cls-2" x="-46" y="74" width="392" height="272" rx="6" ry="6" transform="translate(360 60) rotate(90)"/>
+  <polygon class="cls-3" points="20 400 20 20 280 20 280 400 20 400"/>
+</svg>
