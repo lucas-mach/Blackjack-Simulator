@@ -136,7 +136,7 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
               <Card key={i} rank={c.rank} suit={c.suit} />
             ))}
             {dealerHand.faceDown && (
-              <img src="/cards/back.svg" alt="face-down" style={{width:72,height:100,marginLeft:8}} />
+              <img src="/cards/face-down.svg" alt="face-down" style={{width:72,height:100,marginLeft:8}} />
             )}
         </div>
       </div>
