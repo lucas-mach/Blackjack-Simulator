@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="336" viewBox="0 0 240 336">
+  <rect width="240" height="336" rx="12" ry="12" fill="#ffffff" stroke="#222"/>
+  <text x="20" y="40" font-size="24" fill="#222">CARD</text>
+  <text x="20" y="80" font-size="18" fill="#555">sample</text>
+</svg>

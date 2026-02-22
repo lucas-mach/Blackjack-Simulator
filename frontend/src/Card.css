@@ -1,0 +1,1 @@
+.card-img{box-shadow:0 2px 6px rgba(0,0,0,0.4);border-radius:6px;object-fit:cover;} .hand-row{display:flex;gap:24px;padding:8px 12px;} .hand-label{color:#ddd;font-size:0.9rem;margin-bottom:6px;} .cards{display:flex;align-items:center;} .dealer-hand,.player-hand{display:flex;flex-direction:column;align-items:flex-start;}

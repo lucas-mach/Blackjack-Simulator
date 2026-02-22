@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import './App.css'
+import Navbar from './Navbar'
 import Terminal from './Terminal'
+import Simulation from './Simulation'
+import Trainer from './Trainer'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 
 function App() {
   const [output, setOutput] = useState('')
@@ -11,41 +15,24 @@ function App() {
     setOutput('Simulation session ' + (terminalKey + 1) + ' started...')
   }
 
-  return (
-    <div className="app-container">
-      <h1>Blackjack Simulator</h1>
-      <div className="controls">
-        <button className="run-btn" onClick={handleRunSimulation}>
-          Run Simulation
-        </button>
-      </div>
-
-      <section className="simulation-area">
-        <div className="info-box">
-          {output || 'Click "Run Simulation" to start the terminal session.'}
-        </div>
-
-        <div className="results-link">
-          <a
-            href="http://localhost:8010/results"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Download Results (results.txt)
-          </a>
-        </div>
-
-        <div className="terminal-wrapper">
-          {terminalKey > 0 ? (
-            <Terminal key={terminalKey} />
-          ) : (
-            <div className="terminal-placeholder">
-              Terminal will appear here once simulation starts.
-            </div>
-          )}
-        </div>
-      </section>
+  // Dashboard page
+  const dashboardPage = (
+    <div className="app-container" style={{ textAlign: 'center', paddingTop: '100px' }}>
+      <h1 style={{ fontSize: '48px', color: '#00ff00' }}>Incoming Dashboard</h1>
+      <p style={{ fontSize: '20px', color: '#ddd', marginTop: '20px' }}>Dashboard features coming soon...</p>
     </div>
+  )
+
+  return (
+    <Router>
+      <Navbar />
+      <Routes>
+        <Route path="/simulation" element={<Simulation />} />
+        <Route path="/trainer" element={<Trainer />} />
+        <Route path="/" element={dashboardPage} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   )
 }
 

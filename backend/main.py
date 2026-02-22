@@ -1,5 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from console import ConsoleGame
 from auto import AutoGame
 import threading
@@ -7,8 +9,21 @@ import queue
 import asyncio
 import os
 from engine import simulate_hand
+import json
 
 app = FastAPI(title="Blackjack Simulator API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/health")
 def health_check():
@@ -24,6 +39,30 @@ def get_results():
     if os.path.exists(results_path):
         return FileResponse(results_path, media_type="text/plain", filename="results.txt")
     return {"error": "Results file not found. Run a simulation first."}
+
+class SimRequest(BaseModel):
+    num_games: int = 1000
+    balance: int = 1000
+    bet_amount: int = 10
+    num_decks: int = 8
+
+
+@app.post("/simulate")
+def simulate(req: SimRequest):
+    # Run the existing auto simulation (writes results.txt)
+    AutoGame.auto_play_loop(
+        num_games=req.num_games,
+        balance=req.balance,
+        bet_amount=req.bet_amount,
+        num_decks=req.num_decks,
+        input_func=lambda *args, **kwargs: None,
+        output_func=lambda *args, **kwargs: None,
+    )
+    return {"status": "ok", "num_games": req.num_games}
+
+
+
+
 
 class GameSession:
     def __init__(self, websocket: WebSocket):
@@ -47,8 +86,12 @@ class GameSession:
 
     def run_game(self):
         def input_func(prompt=""):
+            # send a structured prompt message to the client
             if prompt:
-                self.send_message(prompt)
+                try:
+                    self.send_message(json.dumps({'type': 'prompt', 'text': prompt}))
+                except Exception:
+                    self.send_message(prompt)
             while self.is_active:
                 try:
                     return self.input_queue.get(timeout=0.5)
@@ -57,10 +100,23 @@ class GameSession:
             return "quit"
 
         def output_func(*args, **kwargs):
+            # Accept either a single dict (structured event) or plain text args
             if not self.is_active:
                 return
-            msg = " ".join(map(str, args))
-            self.send_message(msg)
+            try:
+                if len(args) == 1 and isinstance(args[0], dict):
+                    payload = args[0]
+                    self.send_message(json.dumps(payload))
+                else:
+                    msg = " ".join(map(str, args))
+                    self.send_message(json.dumps({'type': 'text', 'text': msg}))
+            except Exception:
+                # Fallback to plain text send
+                try:
+                    msg = " ".join(map(str, args))
+                    self.send_message(msg)
+                except Exception:
+                    pass
 
         try:
             output_func("Welcome to Blackjack!")

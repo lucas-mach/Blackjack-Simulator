@@ -2,14 +2,34 @@
     background-color: #1a1a1a;
     color: #00ff00;
     font-family: 'Courier New', Courier, monospace;
-    padding: 20px;
-    border-radius: 8px;
-    height: 500px;
+    padding: 28px;
+    border-radius: 10px;
+    /* anchor to the right on wide screens so left-side content stays visible */
+    position: fixed;
+    right: 60px;
+    left: auto;
+    top: 100px;
+    width: min(760px, 92vw);
+    max-height: calc(100vh - 140px);
+    overflow: auto;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
     border: 1px solid #333;
     text-align: left;
+}
+
+/* On narrow screens keep the box centered and full-width */
+/* On narrower screens keep the box centered and full-width */
+@media (max-width: 1100px) {
+    .terminal-container {
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto;
+        width: 94vw;
+        top: 80px;
+        max-height: calc(100vh - 120px);
+    }
 }
 
 .terminal-output {
@@ -63,3 +83,34 @@
 .terminal-output::-webkit-scrollbar-thumb:hover {
     background: #444;
 }
+
+.actions-row{display:flex;gap:8px;margin-top:8px}
+.action-btn{background:#2b2b2b;color:#fff;border:1px solid #444;padding:8px 12px;border-radius:6px;cursor:pointer}
+.action-btn:hover{background:#3a3a3a}
+.prompt-row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.prompt-row input{padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff}
+.prompt-row button{padding:6px 10px;border-radius:4px;border:1px solid #444;background:#2b2b2b;color:#fff}
+
+.top-bar{display:flex;justify-content:space-between;padding:12px 16px;color:#fff}
+.bet-display,.balance-display{font-weight:700;font-size:16px}
+.dealer-area{display:flex;flex-direction:column;align-items:center;padding:12px}
+.dealer-cards{display:flex;gap:12px}
+.dealer-value,.player-value{color:#fff;margin-bottom:8px;font-weight:700}
+.dealer-label{color:#ddd;margin-bottom:8px}
+.table-center{height:80px;display:flex;align-items:center;justify-content:center;color:#cfcfcf}
+.player-area{display:flex;flex-direction:column;align-items:center;padding:18px}
+.hand-cards{display:flex;gap:12px;margin-bottom:16px}
+.controls{display:flex;justify-content:space-between;width:100%;max-width:720px;padding:0 16px}
+.control-left,.control-right{display:flex;gap:12px}
+.control-btn{width:140px;height:54px;border-radius:28px;border:none;color:#fff;font-weight:700;cursor:pointer}
+.control-btn.stand{background:#ff6b6b}
+.control-btn.hit{background:#2ecc71}
+.control-btn.double{background:#f39c12}
+.control-btn.split{background:#9b59b6}
+.result-banner{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px 28px;border-radius:12px;color:#fff;font-weight:900;z-index:9999;box-shadow:0 12px 48px rgba(0,0,0,0.6);display:flex;flex-direction:column;align-items:center;gap:6px}
+.result-banner.win{background:linear-gradient(135deg,#27ae60,#2ecc71)}
+.result-banner.loss{background:linear-gradient(135deg,#c0392b,#e74c3c)}
+.result-banner.push{background:linear-gradient(135deg,#7f8c8d,#95a5a6)}
+.result-banner.split{background:linear-gradient(135deg,#d68910,#f39c12)}
+.result-banner .title{font-size:28px}
+.result-banner .subtitle{font-size:18px;opacity:0.95}
