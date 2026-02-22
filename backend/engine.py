@@ -1,5 +1,6 @@
 import random
-from typing import List, Dict, Any
+import time
+from typing import List, Dict, Any, Optional
 
 
 CARD_VALUES = {
@@ -71,6 +72,7 @@ def simulate_hand(seed: int = None) -> Dict[str, Any]:
 
     player_cards = player_turn(deck, player_cards)
     player_total = hand_value(player_cards)
+    dealer_total = hand_value(dealer_cards)
 
     if not is_bust(player_total):
         dealer_cards = dealer_turn(deck, dealer_cards)
@@ -84,4 +86,60 @@ def simulate_hand(seed: int = None) -> Dict[str, Any]:
         'player_total': player_total,
         'dealer_total': dealer_total,
         'outcome': outcome
+    }
+
+
+def simulate_many(count: int, seed: Optional[int] = None, strategy: Optional[Dict] = None) -> Dict[str, Any]:
+    # Simulate multiple hands using simulate_hand, aggregate stats
+    # Returns aggregated stats for analysis mode
+
+    if count < 1:
+        raise ValueError("Count must be at least 1")
+
+    wins = losses = pushes = player_busts = dealer_busts = player_blackjacks = 0
+    start_time = time.time()
+
+    current_seed = seed
+    for i in range(count):
+        if seed is not None:
+            current_seed = seed + i  # Increment to avoid identical hands
+
+        result = simulate_hand(seed=current_seed)
+
+        outcome = result['outcome']
+        player_total = result['player_total']
+        dealer_total = result['dealer_total']
+
+        if outcome == 'win':
+            wins += 1
+        elif outcome == 'lose':
+            losses += 1
+        else:
+            pushes += 1
+
+        if player_total > 21:
+            player_busts += 1
+        if dealer_total > 21:
+            dealer_busts += 1
+        if len(result['player_cards']) == 2 and player_total == 21:
+            player_blackjacks += 1
+
+    total_hands = count
+    win_rate = (wins / total_hands) * 100 if total_hands else 0
+    house_edge = ((
+                              losses - wins) / total_hands) * 100 if total_hands else 0  # Simplified
+
+    elapsed = time.time() - start_time
+
+    return {
+        'total_hands': total_hands,
+        'wins': wins,
+        'losses': losses,
+        'pushes': pushes,
+        'win_rate': round(win_rate, 2),
+        'house_edge': round(house_edge, 2),
+        'player_busts': player_busts,
+        'dealer_busts': dealer_busts,
+        'player_blackjacks': player_blackjacks,
+        'elapsed_seconds': round(elapsed, 2)
     }

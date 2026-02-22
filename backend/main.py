@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,8 +8,9 @@ import threading
 import queue
 import asyncio
 import os
-from engine import simulate_hand
+from engine import simulate_hand, simulate_many
 import json
+from typing import Dict
 
 app = FastAPI(title="Blackjack Simulator API")
 
@@ -172,3 +173,17 @@ async def websocket_endpoint(websocket: WebSocket):
 def simulate_single_hand():
     result = simulate_hand()
     return result
+
+
+@app.post("/simulate-batch")
+def run_batch_simulation(body: Dict = Body(...)):
+    count = body.get('count', 1000)
+    seed = body.get('seed')  # Optional
+    if not isinstance(count, int) or count < 1 or count > 100000:
+        raise HTTPException(status_code=400, detail="Count must be an integer between 1 and 100,000")
+
+    try:
+        results = simulate_many(count=count, seed=seed)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
