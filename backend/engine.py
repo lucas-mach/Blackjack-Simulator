@@ -126,8 +126,7 @@ def simulate_many(count: int, seed: Optional[int] = None, strategy: Optional[Dic
 
     total_hands = count
     win_rate = (wins / total_hands) * 100 if total_hands else 0
-    house_edge = ((
-                              losses - wins) / total_hands) * 100 if total_hands else 0  # Simplified
+    house_edge = ((losses - wins) / total_hands) * 100 if total_hands else 0  # Simplified
 
     elapsed = time.time() - start_time
 
