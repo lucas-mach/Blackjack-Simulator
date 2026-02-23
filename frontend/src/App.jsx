@@ -17,21 +17,24 @@ function App() {
 
   // Dashboard page
   const dashboardPage = (
-    <div className="app-container" style={{ textAlign: 'center', paddingTop: '100px' }}>
-      <h1 style={{ fontSize: '48px', color: '#00ff00' }}>Incoming Dashboard</h1>
-      <p style={{ fontSize: '20px', color: '#ddd', marginTop: '20px' }}>Dashboard features coming soon...</p>
+    <div className="app-container dashboard-page">
+      <h1 className="dashboard-title">Incoming Dashboard</h1>
+      <p className="dashboard-intro">Dashboard features coming soon...</p>
     </div>
   )
 
   return (
     <Router>
       <Navbar />
-      <Routes>
-        <Route path="/simulation" element={<Simulation />} />
-        <Route path="/trainer" element={<Trainer />} />
-        <Route path="/" element={dashboardPage} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <main className="main-content">
+        <Routes>
+          <Route path="/simulation" element={<Simulation />} />
+          <Route path="/trainer" element={<Trainer />} />
+          <Route path="/dashboard" element={dashboardPage} />
+          <Route path="/" element={dashboardPage} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
     </Router>
   )
 }

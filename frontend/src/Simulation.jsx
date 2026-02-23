@@ -44,78 +44,46 @@ const Simulation = () => {
 
   return (
     <div className="app-container">
-      <h2 style={{ marginTop: '-15rem', textAlign: 'left' }}>Simulation Mode</h2>
-      <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1rem' }}>
-        <div>
-          <label style={{ marginRight: '0.5rem' }}>Number of Games:</label>
+      <h2 className="simulation-title">Simulation Mode</h2>
+      <div className="simulation-form">
+        <div className="simulation-form-row">
+          <label>Number of Games:</label>
           <input
             type="number"
             value={numGames}
             onChange={(e) => setNumGames(e.target.value)}
             min="1"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #444',
-              backgroundColor: '#1a1a1a',
-              color: '#fff',
-              fontSize: '1rem',
-              width: '120px',
-            }}
+            className="simulation-input"
           />
         </div>
-        <div>
-          <label style={{ marginRight: '0.5rem' }}>Balance:</label>
+        <div className="simulation-form-row">
+          <label>Balance:</label>
           <input
             type="number"
             value={balance}
             onChange={(e) => setBalance(e.target.value)}
             min="1"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #444',
-              backgroundColor: '#1a1a1a',
-              color: '#fff',
-              fontSize: '1rem',
-              width: '120px',
-            }}
+            className="simulation-input"
           />
         </div>
-        <div>
-          <label style={{ marginRight: '0.5rem' }}>Bet Amount:</label>
+        <div className="simulation-form-row">
+          <label>Bet Amount:</label>
           <input
             type="number"
             value={betAmount}
             onChange={(e) => setBetAmount(e.target.value)}
             min="1"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #444',
-              backgroundColor: '#1a1a1a',
-              color: '#fff',
-              fontSize: '1rem',
-              width: '120px',
-            }}
+            className="simulation-input"
           />
         </div>
-        <div>
-          <label style={{ marginRight: '0.5rem' }}>Number of Decks:</label>
+        <div className="simulation-form-row">
+          <label>Number of Decks:</label>
           <input
             type="number"
             value={numDecks}
             onChange={(e) => setNumDecks(e.target.value)}
             min="1"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #444',
-              backgroundColor: '#1a1a1a',
-              color: '#fff',
-              fontSize: '1rem',
-              width: '120px',
-            }}
+            className="simulation-input"
           />
         </div>
       </div>
@@ -126,15 +94,15 @@ const Simulation = () => {
         <button className="run-btn" onClick={fetchResults}>
           View Results (on webpage)
         </button>
-        <div className="results-link" style={{ marginTop: '2rem', textAlign: 'center' }}>
-        <a
-          href="http://localhost:8010/results"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Download Results (results.txt)
-        </a>
-      </div>
+        <div className="results-link results-link-wrap">
+          <a
+            href="http://localhost:8010/results"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Download Results (results.txt)
+          </a>
+        </div>
       </div>
       <div className="info-box">
         {output || 'Click "Run Simulation (REST)" to start.'}

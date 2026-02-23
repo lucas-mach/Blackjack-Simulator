@@ -1,55 +1,70 @@
 .navbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  background-color: #222;
-  padding: 0 1.5rem;
-  height: 60px;
-  color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
+  width: 8rem;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background-color: var(--dark02);
+  padding: 1.5rem 0;
+  border-right: 2px solid var(--mid);
   z-index: 1000;
-}
-
-.navbar-brand {
-  font-size: 1.3rem;
-  font-weight: bold;
 }
 
 .navbar-items {
   list-style: none;
   display: flex;
-  margin: 0; /* align items to the left, next to brand */
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
   padding: 0;
+  gap: 1rem;
 }
 
 .navbar-items li {
-  margin-left: 1.5rem;
-  cursor: pointer;
-  position: relative;
-  padding: 0.5rem 0;
+  margin: 0;
+  padding: 0;
+}
+
+.navbar-items li a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  color: var(--light02);
+  text-decoration: none;
   transition: color 0.2s;
 }
 
-.navbar-items li:hover {
-  color: #00acee;
+.navbar-items li a:hover {
+  color: var(--accent01);
 }
 
-.navbar-items li .active,
-.navbar-items li .active:link,
-.navbar-items li .active:visited {
-  color: #00acee;
+.navbar-items li a.active,
+.navbar-items li a.active:link,
+.navbar-items li a.active:visited {
+  color: var(--accent01);
 }
 
-.navbar-items li .active::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: #00acee;
+.navbar-items li a.active .nav-icon,
+.navbar-items li a:hover .nav-icon {
+  color: inherit;
+}
+
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: var(--font-size-navbar);
+  color: inherit;
+}
+
+.nav-label {
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-medium);
 }

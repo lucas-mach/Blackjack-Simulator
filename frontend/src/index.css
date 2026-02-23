@@ -1,75 +1,64 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Color palette */
+  --dark01: #1E1E1E;
+  --dark02: #212121;
+  --mid: #5D5D5D;
+  --light02: #A9A9A9;
+  --light01: #FBFFFE;
+  --accent01: #E9CE2C;
+  --accent02: #7EA16B;
+
+  /* Typography */
+  --font-size-body: 1rem;
+  --font-size-h1: 3rem;
+  --font-size-h2: 1.2rem;
+  --font-size-h1-sub: 2rem;
+  --font-size-button: 1rem;
+  --font-size-navbar: 2.5rem;
+  --font-weight-light:200;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: var(--font-size-body);
   line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  font-weight: var(--font-weight-regular);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  color: var(--light01);
+  background-color: var(--dark01);
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-regular);
 }
 
-.output-container {
-  border: 1px solid #ccc;
-  min-height: 120px;
-  padding: 8px;
-  overflow: auto;
+.h1-sub {
+  font-size: var(--font-size-h1-sub);
+  font-weight: var(--font-weight-regular);
+}
+
+button {
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-medium);
 }
