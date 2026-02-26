@@ -136,13 +136,21 @@ class AutoGame:
                     action = "H"
                 return action.lower()
 
-    def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8, input_func=input, output_func=print):
+    def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8, input_func=input, output_func=print, return_as_json=False):
         if num_games <= 0:
-            output_func("Number of games must be at least 1.")
-            return
+            if return_as_json:
+                return {"error": "Number of games must be at least 1.", "results": [], "logs": [],
+                        "final_balance": balance, "total_profit": 0}
+            else:
+                output_func("Number of games must be at least 1.")
+                return
         if num_decks <= 0:
-            output_func("Number of decks must be at least 1.")
-            return
+            if return_as_json:
+                return {"error": "Number of decks must be at least 1.", "results": [], "logs": [],
+                        "final_balance": balance, "total_profit": 0}
+            else:
+                output_func("Number of decks must be at least 1.")
+                return
 
         deck = Deck(num_decks)
         deck.shuffle()
@@ -150,7 +158,19 @@ class AutoGame:
         shoe_profit = 0
         card_count = 0
         MAX_SPLITS = 4
-        open('results.txt', 'w').close()
+        #open('results.txt', 'w').close()
+
+        results = [] if return_as_json else None
+        logs = [] if return_as_json else None
+
+        def local_output(*args):
+            if return_as_json:
+                logs.append(" ".join(map(str, args)))
+            else:
+                output_func(*args)
+
+        if not return_as_json:
+            open('results.txt', 'w').close()
 
         all_paths = [
             "strategies/strategy_tcc_8plus.xlsx",
@@ -180,7 +200,9 @@ class AutoGame:
 
             true_card_count = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
             base_bet = bet_amount * AutoGame.determine_bet_multiple(true_card_count)
-            
+            #base_bet = max(base_bet, bet_amount)   # <----------TESTING ONLY
+
+
             # Bet max if money is less than bet
             modified_bet_amount = min(base_bet, balance)
             
@@ -212,8 +234,17 @@ class AutoGame:
             card_count += Game.interpret_card_count(round_result)
             
             true_card_count_log = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
-            with open('results.txt', 'a') as f:
-                f.write(f"hand{i}: balance: {balance} card count: {card_count} \"True\" card count: {true_card_count_log}\n")
+            if not return_as_json:
+                with open('results.txt', 'a') as f:
+                    f.write(
+                        f"hand{i}: balance: {balance} card count: {card_count} \"True\" card count: {true_card_count_log}\n")
+            else:
+                results.append({
+                    "hand": i,
+                    "balance": balance,
+                    "card_count": card_count,
+                    "true_count": true_card_count_log
+                })
             game.end_game()
             
             if len(deck.cards) < (52 * num_decks * 0.25):
@@ -222,6 +253,14 @@ class AutoGame:
                     deck.shuffle()
                     card_count = 0
                     shoe_profit = 0
+
+        if return_as_json:
+            return {
+                "results": results,
+                "logs": logs,
+                "final_balance": balance,
+                "total_profit": total_profit
+            }
 
     def played_hand(game, bet_amount, balance, strategy, input_func=input, output_func=print, MAX_SPLITS=4):
         game.deal_initial()

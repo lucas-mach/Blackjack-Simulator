@@ -51,15 +51,16 @@ class SimRequest(BaseModel):
 @app.post("/simulate")
 def simulate(req: SimRequest):
     # Run the existing auto simulation (writes results.txt)
-    AutoGame.auto_play_loop(
+    sim_results= AutoGame.auto_play_loop(
         num_games=req.num_games,
         balance=req.balance,
         bet_amount=req.bet_amount,
         num_decks=req.num_decks,
         input_func=lambda *args, **kwargs: None,
         output_func=lambda *args, **kwargs: None,
+        return_as_json=True
     )
-    return {"status": "ok", "num_games": req.num_games}
+    return sim_results   # {"status": "ok", "num_games": req.num_games}
 
 
 
