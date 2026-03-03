@@ -7,6 +7,7 @@ const Simulation = () => {
   const [balance, setBalance] = useState(1000);
   const [betAmount, setBetAmount] = useState(10);
   const [numDecks, setNumDecks] = useState(8);
+  const [graphUrl, setGraphUrl] = useState(null);
 
   const runRestSimulation = async () => {
     try {
@@ -32,11 +33,28 @@ const Simulation = () => {
     }
   };
 
+  const [resultsData, setResultsData] = useState(null);
+
   const fetchResults = async () => {
     try {
       const res = await fetch('http://localhost:8010/results');
       const text = await res.text();
-      setOutput(text);
+
+      const rows = text.trim().split('\n');
+      if (rows.length > 0) {
+        const headers = rows[0].split(',');
+        const parsed = rows.slice(1).map(row => {
+          const cols = row.split(',');
+          return headers.reduce((acc, h, i) => {
+            acc[h.trim()] = cols[i] ? cols[i].trim() : '';
+            return acc;
+          }, {});
+        });
+        setResultsData(parsed);
+        setOutput('');
+      } else {
+        setOutput('No results data found.');
+      }
     } catch (err) {
       setOutput('Failed to fetch results: ' + err);
     }
@@ -126,6 +144,9 @@ const Simulation = () => {
         <button className="run-btn" onClick={fetchResults}>
           View Results (on webpage)
         </button>
+        <button className="run-btn" onClick={() => setGraphUrl(`http://localhost:8010/graph?t=${new Date().getTime()}`)}>
+          View Graph
+        </button>
         <div className="results-link" style={{ marginTop: '2rem', textAlign: 'center' }}>
           <a
             href="http://localhost:8010/results"
@@ -137,8 +158,37 @@ const Simulation = () => {
         </div>
       </div>
       <div className="info-box">
-        {output || 'Click "Run Simulation (REST)" to start.'}
+        {output && <div style={{ marginBottom: '1rem' }}>{output}</div>}
+        {!output && !resultsData && 'Click "Run Simulation (REST)" to start.'}
+
+        {resultsData && resultsData.length > 0 && (
+          <div style={{ maxHeight: '400px', overflowY: 'auto', marginTop: '1rem', width: '100%' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+              <thead style={{ position: 'sticky', top: 0, backgroundColor: '#222', zIndex: 1 }}>
+                <tr>
+                  {Object.keys(resultsData[0]).map((h, i) => (
+                    <th key={i} style={{ padding: '8px', borderBottom: '1px solid #444', color: '#1eb854' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {resultsData.map((row, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid #333' }}>
+                    {Object.values(row).map((val, j) => (
+                      <td key={j} style={{ padding: '6px 8px', color: '#ccc' }}>{val}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+      {graphUrl && (
+        <div style={{ marginTop: '2rem', textAlign: 'center', width: '100%' }}>
+          <img src={graphUrl} alt="Simulation Graph" style={{ maxWidth: '100%', border: '1px solid #444', borderRadius: '4px' }} />
+        </div>
+      )}
     </div>
   );
 };

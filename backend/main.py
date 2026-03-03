@@ -51,8 +51,8 @@ class SimRequest(BaseModel):
 
 @app.post("/simulate")
 def simulate(req: SimRequest):
-    # Run the existing auto simulation (writes results.txt)
-    sim_results= AutoGame.auto_play_loop(
+    # Run the simulation and get results as JSON
+    sim_results = AutoGame.auto_play_loop(
         num_games=req.num_games,
         balance=req.balance,
         bet_amount=req.bet_amount,
@@ -61,7 +61,24 @@ def simulate(req: SimRequest):
         output_func=lambda *args, **kwargs: None,
         return_as_json=True
     )
-    return sim_results   # {"status": "ok", "num_games": req.num_games}
+    # Also save CSV + generate graph in the background
+    try:
+        import pandas as pd
+        results_df = pd.DataFrame(sim_results.get("results", []))
+        results_df.to_csv("results.csv", index=False)
+        from graph import SimGraph
+        SimGraph().generate()
+    except Exception as e:
+        print(f"Graph generation failed: {e}")
+    return sim_results
+
+
+@app.get("/graph")
+def get_graph():
+    graph_path = os.path.join(os.getcwd(), "simulation_graph.png")
+    if os.path.exists(graph_path):
+        return FileResponse(graph_path, media_type="image/png")
+    return {"error": "No graph found. Run a simulation first."}
 
 
 
