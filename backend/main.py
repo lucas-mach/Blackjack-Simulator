@@ -36,9 +36,10 @@ def health_check():
 
 @app.get("/results")
 def get_results():
-    results_path = os.path.join(os.getcwd(), "results.txt")
+    # serve the latest CSV output from auto-play
+    results_path = os.path.join(os.getcwd(), "results.csv")
     if os.path.exists(results_path):
-        return FileResponse(results_path, media_type="text/plain", filename="results.txt")
+        return FileResponse(results_path, media_type="text/csv", filename="results.csv")
     return {"error": "Results file not found. Run a simulation first."}
 
 class SimRequest(BaseModel):
@@ -137,7 +138,7 @@ class GameSession:
                     num_decks = int(num_decks_str)
                     output_func("Playing ", num_games, " games with balance ", balance, ", bet amount ", bet_amount, ", and ", num_decks, " decks.")
                     try:
-                        AutoGame.auto_play_loop(
+                        results_df = AutoGame.auto_play_loop(
                             num_games=num_games, 
                             balance=balance, 
                             bet_amount=bet_amount, 
@@ -145,7 +146,7 @@ class GameSession:
                             input_func=input_func,
                             output_func=output_func
                         )
-                        output_func("\nSimulation complete. You can download results.txt from the website link.")
+                        output_func("\nSimulation complete. You can download results.csv from the website link.")
                     except Exception as e:
                         output_func(f"Simulation error: {e}")
                 except ValueError:

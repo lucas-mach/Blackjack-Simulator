@@ -12,3 +12,4 @@ __pycache__/
 # env files
 .env
 backend/results.txt
+backend/results.csv

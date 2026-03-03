@@ -144,13 +144,6 @@ class AutoGame:
             else:
                 output_func("Number of games must be at least 1.")
                 return
-        if num_decks <= 0:
-            if return_as_json:
-                return {"error": "Number of decks must be at least 1.", "results": [], "logs": [],
-                        "final_balance": balance, "total_profit": 0}
-            else:
-                output_func("Number of decks must be at least 1.")
-                return
 
         deck = Deck(num_decks)
         deck.shuffle()
@@ -158,19 +151,17 @@ class AutoGame:
         shoe_profit = 0
         card_count = 0
         MAX_SPLITS = 4
-        #open('results.txt', 'w').close()
-
-        results = [] if return_as_json else None
-        logs = [] if return_as_json else None
+        # Data storage
+        results = []
+        logs = []
 
         def local_output(*args):
-            if return_as_json:
-                logs.append(" ".join(map(str, args)))
-            else:
-                output_func(*args)
+            logs.append(" ".join(map(str, args)))
+            output_func(*args)
 
-        if not return_as_json:
-            open('results.txt', 'w').close()
+        # legacy text file removed; use csv when not returning json
+        #if not return_as_json:
+        #    open('results.txt', 'w').close()
 
         all_paths = [
             "strategies/strategy_tcc_8plus.xlsx",
@@ -233,18 +224,20 @@ class AutoGame:
             
             card_count += Game.interpret_card_count(round_result)
             
-            true_card_count_log = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
-            if not return_as_json:
-                with open('results.txt', 'a') as f:
-                    f.write(
-                        f"hand{i}: balance: {balance} card count: {card_count} \"True\" card count: {true_card_count_log}\n")
+            # Compute actual total bet placed this hand (handles splits & doubles)
+            if isinstance(round_result, list):
+                actual_bet = sum(r[1] for r in round_result)
             else:
-                results.append({
-                    "hand": i,
-                    "balance": balance,
-                    "card_count": card_count,
-                    "true_count": true_card_count_log
-                })
+                actual_bet = round_result[1]
+            
+            true_card_count_log = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
+            results.append({
+                "hand": i+1,
+                "balance": balance,
+                "card_count": card_count,
+                "true_count": true_card_count_log,
+                "bet": actual_bet,
+            })
             game.end_game()
             
             if len(deck.cards) < (52 * num_decks * 0.25):
@@ -254,13 +247,33 @@ class AutoGame:
                     card_count = 0
                     shoe_profit = 0
 
+        # convert accumulated rows into a pandas DataFrame and save csv
+        results_df = pd.DataFrame(results)
+        csv_saved = False
+        try:
+            results_df.to_csv('results.csv', index=False)
+            csv_saved = True
+        except Exception:
+            # if writing fails, still return dataframe
+            pass
+
         if return_as_json:
             return {
+                "num_games": num_games,
                 "results": results,
                 "logs": logs,
                 "final_balance": balance,
                 "total_profit": total_profit
             }
+        else:
+            # Auto-generate the simulation graph after a console/script run
+            if csv_saved:
+                try:
+                    from graph import SimGraph
+                    SimGraph().generate()
+                except Exception as e:
+                    output_func(f"[SimGraph] Could not generate graph: {e}")
+            return results_df
 
     def played_hand(game, bet_amount, balance, strategy, input_func=input, output_func=print, MAX_SPLITS=4):
         game.deal_initial()
