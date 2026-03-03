@@ -5,7 +5,7 @@ import Terminal from './Terminal'
 import Simulation from './Simulation'
 import Trainer from './Trainer'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-
+import Graph from './Graph'
 function App() {
   const [output, setOutput] = useState('')
   const [terminalKey, setTerminalKey] = useState(0)
@@ -29,6 +29,7 @@ function App() {
       <Routes>
         <Route path="/simulation" element={<Simulation />} />
         <Route path="/trainer" element={<Trainer />} />
+        <Route path="/graph" element={<Graph />} />
         <Route path="/" element={dashboardPage} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
