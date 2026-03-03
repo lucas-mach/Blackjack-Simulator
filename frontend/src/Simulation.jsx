@@ -127,14 +127,14 @@ const Simulation = () => {
           View Results (on webpage)
         </button>
         <div className="results-link" style={{ marginTop: '2rem', textAlign: 'center' }}>
-        <a
-          href="http://localhost:8010/results"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Download Results (results.txt)
-        </a>
-      </div>
+          <a
+            href="http://localhost:8010/results"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Download Results (results.csv)
+          </a>
+        </div>
       </div>
       <div className="info-box">
         {output || 'Click "Run Simulation (REST)" to start.'}
