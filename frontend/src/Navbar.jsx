@@ -21,6 +21,11 @@ const Navbar = () => {
             Trainer Mode
           </NavLink>
         </li>
+        <li>
+          <NavLink to="/graph" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Graph (Testing)
+          </NavLink>
+        </li>
       </ul>
     </nav>
   );
