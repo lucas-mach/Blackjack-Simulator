@@ -13,3 +13,6 @@ __pycache__/
 .env
 backend/results.txt
 backend/results.csv
+backend/__pycache__/auto.cpython-313.pyc
+backend/__pycache__/main.cpython-313.pyc
+backend/__pycache__/main.cpython-313.pyc
