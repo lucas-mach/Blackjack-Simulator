@@ -74,20 +74,38 @@ class AutoGame:
         else:
             return "strategies/strategy_tcc_under_neg2.xlsx"
 
+            
+    def determine_bet_multiple(true_count: int) -> int:
+        """
+        Bet spread based on the Kelly Criterion and professional Hi-Lo counting strategy.
+        Uses a 1-12 unit spread, the most common among professional counters.
         
-    def determine_bet_multiple(true_card_count: int) -> int:
-        if true_card_count >= 10:
-            return 10
-        if true_card_count >= 5:
-            return 4
-        elif true_card_count >= 2:
-            return 2
-        elif true_card_count >= 0:
-            return 1
-        elif true_card_count >= -5:
-            return 1
-        else:
-            return 0
+        True Count | Bet (units) | Player Edge (approx)
+        -----------|-------------|---------------------
+            < 1   |      1      |   House edge
+            1   |      2      |   ~0%  (break even)
+            2   |      4      |   ~0.5%
+            3   |      6      |   ~1.0%
+            4   |      8      |   ~1.5%
+            5   |      10     |   ~2.0%
+            6+   |      12     |   ~2.5%+
+        -----------|-------------|---------------------
+        Negative counts: table minimum (sit out if allowed)
+        """
+        BET_RAMP = {
+            1: 2,
+            2: 4,
+            3: 6,
+            4: 8,
+            5: 10,
+        }
+        
+        if true_count <= 0:
+            return 1   # Minimum bet — house has the edge
+        if true_count >= 6:
+            return 12  # Maximum bet — Kelly-optimal cap
+        
+        return BET_RAMP.get(true_count, 1)
 
     class Strategy:
         def __init__(self, path: str):
