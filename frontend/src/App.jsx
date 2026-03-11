@@ -6,6 +6,7 @@ import Simulation from './Simulation'
 import Trainer from './Trainer'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Graph from './Graph'
+import Dashboard from './Dashboard';
 function App() {
   const [output, setOutput] = useState('')
   const [terminalKey, setTerminalKey] = useState(0)
@@ -16,12 +17,13 @@ function App() {
   }
 
   // Dashboard page
-  const dashboardPage = (
-    <div className="app-container" style={{ textAlign: 'center', paddingTop: '100px' }}>
-      <h1 style={{ fontSize: '48px', color: '#00ff00' }}>Incoming Dashboard</h1>
-      <p style={{ fontSize: '20px', color: '#ddd', marginTop: '20px' }}>Dashboard features coming soon...</p>
-    </div>
-  )
+  //const dashboardPage = (
+  //  <div className="app-container" style={{ textAlign: 'center', paddingTop: '100px' }}>
+  //    <h1 style={{ fontSize: '48px', color: '#00ff00' }}>Incoming Dashboard</h1>
+  //    <p style={{ fontSize: '20px', color: '#ddd', marginTop: '20px' }}>Dashboard features coming soon...</p>
+  //  </div>
+  //)
+
 
   return (
     <Router>
@@ -30,7 +32,7 @@ function App() {
         <Route path="/simulation" element={<Simulation />} />
         <Route path="/trainer" element={<Trainer />} />
         <Route path="/graph" element={<Graph />} />
-        <Route path="/" element={dashboardPage} />
+        <Route path="/" element={<Dashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

@@ -19,10 +19,14 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "*"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS", "HEAD"],  #<---------------------NEW Fix: explicit instead of "*"
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin"],
+    expose_headers=["Content-Disposition"],
+    allow_origin_regex=None,
+    max_age=86400,
 )
 
 
@@ -38,9 +42,23 @@ def health_check():
 def get_results():
     # serve the latest CSV output from auto-play
     results_path = os.path.join(os.getcwd(), "results.csv")
-    if os.path.exists(results_path):
-        return FileResponse(results_path, media_type="text/csv", filename="results.csv")
-    return {"error": "Results file not found. Run a simulation first."}
+    if not os.path.exists(results_path):
+        #return FileResponse(results_path, media_type="text/csv", filename="results.csv")
+        return {"error": "Results file not found. Run a simulation first."}
+    #return {"error": "Results file not found. Run a simulation first."}
+    return FileResponse(
+        results_path,
+        media_type="text/csv",
+        filename="results.csv",
+        headers={
+            "Access-Control-Allow-Origin": "http://localhost:5173",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Accept",
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            "Access-Control-Max-Age": "86400",
+        }
+    )
+
 
 class SimRequest(BaseModel):
     num_games: int = 1000
@@ -76,9 +94,17 @@ def simulate(req: SimRequest):
 @app.get("/graph")
 def get_graph():
     graph_path = os.path.join(os.getcwd(), "simulation_graph.png")
-    if os.path.exists(graph_path):
-        return FileResponse(graph_path, media_type="image/png")
-    return {"error": "No graph found. Run a simulation first."}
+    if not os.path.exists(graph_path):
+        #return FileResponse(graph_path, media_type="image/png")
+        return {"error": "No graph found. Run a simulation first."}
+    return FileResponse(
+        graph_path,
+        media_type="image/png",
+        filename="simulation_graph.png",
+        headers={
+            "Access-Control-Allow-Origin": "http://localhost:5173",
+        }
+    )
 
 
 

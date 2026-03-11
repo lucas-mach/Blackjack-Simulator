@@ -9,7 +9,7 @@ const Graph = () => {
   const [hovered, setHovered] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:8010/results')
+    fetch('http://localhost:8000/results')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch results');
         return res.text();
