@@ -10,6 +10,7 @@ import asyncio
 import os
 from engine import simulate_hand, simulate_many
 import json
+import time
 from typing import Dict
 
 app = FastAPI(title="Blackjack Simulator API")
@@ -69,6 +70,12 @@ class SimRequest(BaseModel):
 
 @app.post("/simulate")
 def simulate(req: SimRequest):
+
+    # Timer start for benchmarking
+    endpoint_start_time = time.perf_counter()
+    print("Request received")
+    sim_start = time.perf_counter()
+
     # Run the simulation and get results as JSON
     sim_results = AutoGame.auto_play_loop(
         num_games=req.num_games,
@@ -79,7 +86,13 @@ def simulate(req: SimRequest):
         output_func=lambda *args, **kwargs: None,
         return_as_json=True
     )
+
+    # timer
+    sim_end = time.perf_counter()
+    print(f"API simulation time (auto_play_loop): {sim_end - sim_start:.4f}s")
+
     # Also save CSV + generate graph in the background
+    graph_start = time.perf_counter()
     try:
         import pandas as pd
         results_df = pd.DataFrame(sim_results.get("results", []))
@@ -88,6 +101,13 @@ def simulate(req: SimRequest):
         SimGraph().generate()
     except Exception as e:
         print(f"Graph generation failed: {e}")
+
+    # timer    
+    graph_end = time.perf_counter()
+    print(f"API graph/CSV generation time: {graph_end - graph_start:.4f}s")
+    endpoint_end = time.perf_counter()
+    print(f"API total endpoint time: {endpoint_end - endpoint_start_time:.4f}s")
+
     return sim_results
 
 

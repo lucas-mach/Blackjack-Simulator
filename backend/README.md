@@ -54,3 +54,9 @@ http://127.0.0.1:8000/docs     (Swagger UI - try clicking the health endpoint he
 
 ### Stopping the Server
 Press Ctrl + C in the terminal window where uvicorn is running.
+
+
+### Benchmark Testing (Backend)
+backend/benchmarks.py calculates the runtime performances and averages of the blackjack simulation for 1k, 5k, 10k and 25k hands across multiple runs.
+To run, you should be in the backend folder, have the backend virtual environment running and have all the 
+dependencied in requirements.txt installed and then run "python benchmarks.py". 
