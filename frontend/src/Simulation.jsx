@@ -58,14 +58,21 @@ const Simulation = () => {
       netProfit: data.total_profit || 0,
 
         balanceHistory: data.results?.length > 500                      //<---------------------------NEW Fix: Updated results history for history clearing button
-  ? data.results.filter((_, idx) => idx % Math.ceil(data.results.length / 500) === 0)
-      .map((r) => ({ handNumber: r.hand, balance: r.balance }))
-  : data.results?.map((r) => ({ handNumber: r.hand, balance: r.balance })) || [],
+        ? data.results.filter((_, idx) => idx % Math.ceil(data.results.length / 500) === 0)
+        .map((r) => ({ handNumber: r.hand, balance: r.balance }))
+        : data.results?.map((r) => ({ handNumber: r.hand, balance: r.balance })) || [],
 
-trueCountHistory: data.results?.length > 500
-  ? data.results.filter((_, idx) => idx % Math.ceil(data.results.length / 500) === 0)
-      .map((r) => ({ handNumber: r.hand, trueCount: r.true_count }))
-  : data.results?.map((r) => ({ handNumber: r.hand, trueCount: r.true_count })) || [],
+        trueCountHistory: data.results?.length > 500
+        ? data.results.filter((_, idx) => idx % Math.ceil(data.results.length / 500) === 0)
+        .map((r) => ({ handNumber: r.hand, trueCount: r.true_count }))
+        : data.results?.map((r) => ({ handNumber: r.hand, trueCount: r.true_count })) || [],
+
+        inputs: {    //<-------------------------NEW Added the original user inputs to the dashboard graphs
+        numGames: games,
+        initialBalance: bal,
+        betAmount: bet,
+        numDecks: decks
+      }
     };
 
     const existing = JSON.parse(localStorage.getItem('blackjackSimResults') || '[]');
