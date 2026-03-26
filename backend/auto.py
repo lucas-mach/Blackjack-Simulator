@@ -1,4 +1,4 @@
-from bj import Game, PlayerHand, DealerHand, Deck, Card
+from bj import Game, PlayerHand, DealerHand, Deck, Card, RuleSet
 import pandas as pd
 from openpyxl import load_workbook
 
@@ -154,7 +154,9 @@ class AutoGame:
                     action = "H"
                 return action.lower()
 
-    def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8, input_func=input, output_func=print, return_as_json=False):
+    def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8, rules=None, input_func=input, output_func=print, return_as_json=False):
+        if rules is None:
+            rules = RuleSet()
         if num_games <= 0:
             if return_as_json:
                 return {"error": "Number of games must be at least 1.", "results": [], "logs": [],
@@ -168,7 +170,7 @@ class AutoGame:
         total_profit = 0
         shoe_profit = 0
         card_count = 0
-        MAX_SPLITS = 4
+        MAX_SPLITS = rules.max_splits
         # Data storage
         results = []
         logs = []
@@ -233,9 +235,9 @@ class AutoGame:
 
             game = deck.new_game()
             # Pass balance MINUS initial bet to played_hand for splits/doubles
-            round_result = AutoGame.played_hand(game, modified_bet_amount, balance - modified_bet_amount, strategy, input_func=input_func, output_func=output_func, MAX_SPLITS=MAX_SPLITS)
+            round_result = AutoGame.played_hand(game, modified_bet_amount, balance - modified_bet_amount, strategy, rules=rules, input_func=input_func, output_func=output_func, MAX_SPLITS=MAX_SPLITS)
             
-            profit = Game.interpret_result(round_result)
+            profit = Game.interpret_result(round_result, bj_payout=rules.blackjack_payout)
             balance += profit
             total_profit += profit
             shoe_profit += profit
@@ -293,9 +295,14 @@ class AutoGame:
                     output_func(f"[SimGraph] Could not generate graph: {e}")
             return results_df
 
-    def played_hand(game, bet_amount, balance, strategy, input_func=input, output_func=print, MAX_SPLITS=4):
+    def played_hand(game, bet_amount, balance, strategy, rules=None, input_func=input, output_func=print, MAX_SPLITS=4):
+        if rules is None:
+            rules = RuleSet()
         game.deal_initial()
         dealer_hand = game.dealer_hand
+        
+        # Insurance side-bet (auto: always decline in basic strategy)
+        # (Insurance offered when dealer shows Ace; auto-play always declines)
         
         # Initial Blackjack check
         if game.player_hands[0].blackjack():
@@ -318,20 +325,63 @@ class AutoGame:
                 if hand.get_value() >= 21:
                     break
                     
+                # Determine whether this hand is a post-split-aces hand
+                is_split_aces_hand = getattr(hand, '_split_from_ace', False)
+                
+                # Apply split-aces restriction: no_play = stand immediately after receiving split card
+                if is_split_aces_hand and rules.split_aces == 'no_play':
+                    break
+                    
                 # Action based on strategy
-                action = strategy.get_action(hand, dealer_hand.get_card_shown_value(), splitallowed=(len(game.player_hands) < MAX_SPLITS))
+                splitallowed = (len(game.player_hands) < MAX_SPLITS)
+                # split_aces:'play_no_resplit' disallows resplitting aces
+                if is_split_aces_hand and rules.split_aces == 'play_no_resplit' and hand.cards and hand.cards[0].rank == 'A':
+                    splitallowed = False
+                action = strategy.get_action(hand, dealer_hand.get_card_shown_value(), splitallowed=splitallowed)
+                
+                # Surrender: if strategy suggests surrender and surrender is allowed
+                if action == 'r' and rules.surrender_allowed and hand.num_cards() == 2:
+                    bets[i] = bets[i]  # keep bet for half-loss calculation
+                    # Mark as surrender result
+                    results_override = []
+                    total_count2 = AutoGame.count_cards([hand] + [game.player_hands[j] for j in range(len(game.player_hands)) if j != i] + [dealer_hand])
+                    results_override.append(('R', bets[i], total_count2))
+                    # No dealer play needed; collect and return
+                    # (We break out of the outer while and skip to collecting)
+                    # Use a sentinel to signal surrender
+                    hand._surrendered = True
+                    break
+                elif action == 'r':
+                    # Surrender not allowed, fall back to hit
+                    action = 'h'
                 
                 if action == 'h':
                     game.player_hit(handnum=i)
                 elif action == 's':
                     break
                 elif action == 'd' and hand.num_cards() == 2 and balance >= current_bet:
-                    game.player_hit(handnum=i)
-                    bets[i] *= 2
+                    # Check double_on restriction
+                    hand_val = hand.get_value()
+                    can_double = (rules.double_on == 'any') or (hand_val in (10, 11))
+                    # Check double_after_split restriction
+                    if is_split_aces_hand and not rules.double_after_split:
+                        can_double = False
+                    if can_double:
+                        game.player_hit(handnum=i)
+                        bets[i] *= 2
+                    else:
+                        # Fall back to hit when double not allowed by rules
+                        game.player_hit(handnum=i)
                     break
                 elif action == 'v' and hand.can_split() and balance >= current_bet:
                     balance -= current_bet
                     game.deal_split(i)
+                    # Mark new split card hand so rules can restrict it
+                    new_hand = game.player_hands[i + 1] if i + 1 < len(game.player_hands) else None
+                    if new_hand and hand.cards and hand.cards[0].rank == 'A':
+                        hand._split_from_ace = True
+                        if new_hand:
+                            new_hand._split_from_ace = True
                     # When we split, the current hand 'i' gets a new card, and a new hand is at i+1
                     bets.insert(i + 1, current_bet)
                     # Continue playing the current hand i
@@ -341,16 +391,28 @@ class AutoGame:
                     break
             i += 1
             
-        # Dealer plays if any hand isn't busted
-        any_active = any(not h.is_busted() for h in game.player_hands)
+        # Dealer plays if any hand isn't busted (and not all surrendered)
+        any_active = any(not h.is_busted() and not getattr(h, '_surrendered', False) for h in game.player_hands)
         if any_active:
-            game.dealer_play(Auto=True)
+            game.dealer_play(Auto=True, rules=rules)
             
         # Collect results
         results = []
         total_count = 0
         for idx, h in enumerate(game.player_hands):
-            res = game.get_winner(idx)
+            # Handle surrender
+            if getattr(h, '_surrendered', False):
+                cnt = 0
+                if idx == 0:
+                    total_cards = []
+                    for ph in game.player_hands:
+                        total_cards.extend(ph.cards)
+                    total_cards.extend(dealer_hand.cards)
+                    total_count = AutoGame.count_cards(total_cards)
+                    cnt = total_count
+                results.append(('R', bets[idx], cnt))
+                continue
+            res = game.get_winner(idx, rules=rules)
             cnt = 0
             if idx == 0:
                 # Only count dealer cards once

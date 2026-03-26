@@ -4,13 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from console import ConsoleGame
 from auto import AutoGame
+from bj import RuleSet
 import threading
 import queue
 import asyncio
 import os
 from engine import simulate_hand, simulate_many
 import json
-from typing import Dict
+from typing import Dict, Optional
 
 app = FastAPI(title="Blackjack Simulator API")
 
@@ -65,16 +66,36 @@ class SimRequest(BaseModel):
     balance: int = 1000
     bet_amount: int = 10
     num_decks: int = 8
+    # Custom rules
+    blackjack_payout: str = '3:2'
+    max_splits: int = 4
+    double_on: str = 'any'
+    double_after_split: bool = True
+    dealer_hits_soft_17: bool = False
+    split_aces: str = 'no_play'
+    surrender_allowed: bool = False
+    insurance_allowed: bool = True
 
 
 @app.post("/simulate")
 def simulate(req: SimRequest):
+    rules = RuleSet(
+        blackjack_payout=req.blackjack_payout,
+        max_splits=req.max_splits,
+        double_on=req.double_on,
+        double_after_split=req.double_after_split,
+        dealer_hits_soft_17=req.dealer_hits_soft_17,
+        split_aces=req.split_aces,
+        surrender_allowed=req.surrender_allowed,
+        insurance_allowed=req.insurance_allowed,
+    )
     # Run the simulation and get results as JSON
     sim_results = AutoGame.auto_play_loop(
         num_games=req.num_games,
         balance=req.balance,
         bet_amount=req.bet_amount,
         num_decks=req.num_decks,
+        rules=rules,
         input_func=lambda *args, **kwargs: None,
         output_func=lambda *args, **kwargs: None,
         return_as_json=True
@@ -168,7 +189,31 @@ class GameSession:
             output_func("Welcome to Blackjack!")
             mode = input_func("Choose mode: (1) Console Play (2) Auto Play\n").strip()
             if mode == '1':
-                ConsoleGame.console_play(input_func=input_func, output_func=output_func)
+                # Try to receive rules config from client (JSON message with type 'rules')
+                rules = RuleSet()
+                try:
+                    rules_raw = self.input_queue.get(timeout=1.0)
+                    if rules_raw and rules_raw.startswith('{'):
+                        rules_data = json.loads(rules_raw)
+                        if rules_data.get('type') == 'rules':
+                            rules = RuleSet(
+                                blackjack_payout=rules_data.get('blackjack_payout', '3:2'),
+                                max_splits=int(rules_data.get('max_splits', 4)),
+                                double_on=rules_data.get('double_on', 'any'),
+                                double_after_split=bool(rules_data.get('double_after_split', True)),
+                                dealer_hits_soft_17=bool(rules_data.get('dealer_hits_soft_17', False)),
+                                split_aces=rules_data.get('split_aces', 'play_no_resplit'),
+                                surrender_allowed=bool(rules_data.get('surrender_allowed', False)),
+                                insurance_allowed=bool(rules_data.get('insurance_allowed', False)),
+                            )
+                        else:
+                            # Not a rules message, put it back in queue as a bet input
+                            self.input_queue.put(rules_raw)
+                    elif rules_raw:
+                        self.input_queue.put(rules_raw)
+                except queue.Empty:
+                    pass  # No rules message, use defaults
+                ConsoleGame.console_play(rules=rules, input_func=input_func, output_func=output_func)
             elif mode == '2':
                 try:
                     num_games_str = input_func("Enter number of games to play: ").strip()
