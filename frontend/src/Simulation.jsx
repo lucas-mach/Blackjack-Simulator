@@ -33,6 +33,26 @@ const Simulation = () => {
         balance: bal,
         bet_amount: bet,
         num_decks: decks,
+        // Merge in custom rules from Dashboard settings
+        ...(() => {
+          try {
+            const savedRules = localStorage.getItem('blackjackRules');
+            if (savedRules) {
+              const r = JSON.parse(savedRules);
+              return {
+                blackjack_payout: r.blackjack_payout ?? '3:2',
+                max_splits: r.max_splits ?? 4,
+                double_on: r.double_on ?? 'any',
+                double_after_split: r.double_after_split ?? true,
+                dealer_hits_soft_17: r.dealer_hits_soft_17 ?? false,
+                split_aces: r.split_aces ?? 'play_no_resplit',
+                surrender_allowed: r.surrender_allowed ?? false,
+                insurance_allowed: r.insurance_allowed ?? false,
+              };
+            }
+          } catch {}
+          return {};
+        })(),
       }),
     });
 

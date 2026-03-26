@@ -1,3 +1,27 @@
+from dataclasses import dataclass, field
+
+@dataclass
+class RuleSet:
+    """Configurable house rules for Blackjack.
+
+    blackjack_payout: '3:2' | '6:5' | '1:1'
+    max_splits: 1..4
+    double_on: 'any' | '10_11'  (any 2 cards vs only 10 or 11)
+    double_after_split: bool
+    dealer_hits_soft_17: bool
+    split_aces: 'play_no_resplit' | 'no_play' | 'same'
+    surrender_allowed: bool
+    insurance_allowed: bool
+    """
+    blackjack_payout: str = '3:2'
+    max_splits: int = 4
+    double_on: str = 'any'
+    double_after_split: bool = True
+    dealer_hits_soft_17: bool = False
+    split_aces: str = 'no_play'
+    surrender_allowed: bool = False
+    insurance_allowed: bool = True
+
 class Card:
     def __init__(self, rank, suit):
         self.rank = rank
@@ -91,10 +115,10 @@ class Game:
             raise IndexError("Invalid hand number to hit")
         self.player_hands[handnum].draw_card(self.deck.deal_card())
 
-    def dealer_play(self, Auto=True, output_func=None):
+    def dealer_play(self, Auto=True, output_func=None, rules=None):
         if not Auto and output_func:
             output_func("Dealer's Hand:", self.dealer_hand.get_cards(), ": ", self.dealer_hand.get_value())
-        while self.dealer_hand.should_hit():
+        while self.dealer_hand.should_hit(rules=rules):
             self.dealer_hand.draw_card(self.deck.deal_card())
             if not Auto and output_func:
                 output_func("Dealer's Hand:", self.dealer_hand.get_cards(), ": ", self.dealer_hand.get_value())
@@ -103,7 +127,7 @@ class Game:
         """Clean up the game when it's done"""
         self.deck.remove_game(self)
 
-    def get_winner(self, handnum=0):
+    def get_winner(self, handnum=0, rules=None):
         if self.player_hands[handnum].is_busted():
             return "L"
         elif self.dealer_hand.is_busted():
@@ -114,14 +138,31 @@ class Game:
             return "L"
         else:
             return "P"
-    def interpret_result(result):
-        """Returns net profit/loss from any result structure"""
+    def interpret_result(result, bj_payout='3:2'):
+        """Returns net profit/loss from any result structure.
+        bj_payout: '3:2' | '6:5' | '1:1' — only applies to W! (blackjack) outcomes.
+        """
         if isinstance(result, tuple):
             outcome, bet, count = result
-            if outcome not in ['W', 'W!','L','P']:
+            if outcome not in ['W', 'W!', 'L', 'P', 'R', 'E']:
                 raise ValueError("Invalid outcome")
-            return bet*1.5 if outcome == 'W!' else bet if outcome == 'W' else -bet if outcome == 'L' else 0
-        return sum(Game.interpret_result(r) for r in result) if isinstance(result, list) else 0
+            if outcome == 'W!':
+                if bj_payout == '6:5':
+                    multiplier = 1.2
+                elif bj_payout == '1:1':
+                    multiplier = 1.0
+                else:  # default 3:2
+                    multiplier = 1.5
+                return bet * multiplier
+            elif outcome == 'W':
+                return bet
+            elif outcome == 'L':
+                return -bet
+            elif outcome == 'R':  # surrender
+                return -bet * 0.5
+            else:  # P, E
+                return 0
+        return sum(Game.interpret_result(r, bj_payout) for r in result) if isinstance(result, list) else 0
     def interpret_card_count(result):
         """Returns card count from any result structure"""
         if isinstance(result, tuple):
@@ -191,8 +232,13 @@ class PlayerHand:
         return self.get_value() > 21  
     
 class DealerHand(PlayerHand):
-    def should_hit(self):
-        return self.get_value() < 17 
+    def should_hit(self, rules=None):
+        v = self.get_value()
+        if v < 17:
+            return True
+        if v == 17 and rules and getattr(rules, 'dealer_hits_soft_17', False) and self.has_soft_ace():
+            return True
+        return False
     def get_card_shown(self):
         if not self.cards:
             return ""

@@ -18,7 +18,7 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
   const ws = useRef(null);
 
   useEffect(() => {
-    ws.current = new WebSocket('ws://localhost:8010/ws/game');
+    ws.current = new WebSocket('ws://localhost:8000/ws/game');
 
     ws.current.onopen = () => {
       setConnected(true);
@@ -26,6 +26,12 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
       if (autoSelect) {
         try {
           ws.current.send('1');
+          // Send custom rules from Dashboard settings
+          try {
+            const savedRules = localStorage.getItem('blackjackRules');
+            const rulesData = savedRules ? JSON.parse(savedRules) : {};
+            ws.current.send(JSON.stringify({ type: 'rules', ...rulesData }));
+          } catch {}
         } catch (e) {}
       }
     };
