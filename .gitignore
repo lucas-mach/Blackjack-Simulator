@@ -6,9 +6,15 @@
 
 # Python
 venv/
+backend/venv/
 __pycache__/
 *.pyc
 
 # env files
 .env
 backend/results.txt
+backend/results.csv
+backend/simulation_graph.png
+backend/__pycache__/auto.cpython-313.pyc
+backend/__pycache__/main.cpython-313.pyc
+backend/__pycache__/main.cpython-313.pyc

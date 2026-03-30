@@ -17,10 +17,21 @@ const Navbar = () => {
   return (
     <nav className="navbar" aria-label="Main navigation">
       <ul className="navbar-items">
-        <NavItem to="/" end icon="home" label="Home" />
-        <NavItem to="/dashboard" end icon="dashboard" label="Dashboard" />
-        <NavItem to="/simulation" end icon="memory" label="Simulate" />
-        <NavItem to="/trainer" end icon="play_circle" label="Training" />
+        <li>
+          <NavLink to="/simulation" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Simulation Mode
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/trainer" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Trainer Mode
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/graph" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Graph (Testing)
+          </NavLink>
+        </li>
       </ul>
     </nav>
   );

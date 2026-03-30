@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,8 +8,10 @@ import threading
 import queue
 import asyncio
 import os
-from engine import simulate_hand
+from engine import simulate_hand, simulate_many
 import json
+import time
+from typing import Dict
 
 app = FastAPI(title="Blackjack Simulator API")
 
@@ -18,10 +20,14 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "*"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS", "HEAD"],  #<---------------------NEW Fix: explicit instead of "*"
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin"],
+    expose_headers=["Content-Disposition"],
+    allow_origin_regex=None,
+    max_age=86400,
 )
 
 
@@ -35,10 +41,25 @@ def health_check():
 
 @app.get("/results")
 def get_results():
-    results_path = os.path.join(os.getcwd(), "results.txt")
-    if os.path.exists(results_path):
-        return FileResponse(results_path, media_type="text/plain", filename="results.txt")
-    return {"error": "Results file not found. Run a simulation first."}
+    # serve the latest CSV output from auto-play
+    results_path = os.path.join(os.getcwd(), "results.csv")
+    if not os.path.exists(results_path):
+        #return FileResponse(results_path, media_type="text/csv", filename="results.csv")
+        return {"error": "Results file not found. Run a simulation first."}
+    #return {"error": "Results file not found. Run a simulation first."}
+    return FileResponse(
+        results_path,
+        media_type="text/csv",
+        filename="results.csv",
+        headers={
+            "Access-Control-Allow-Origin": "http://localhost:5173",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Accept",
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            "Access-Control-Max-Age": "86400",
+        }
+    )
+
 
 class SimRequest(BaseModel):
     num_games: int = 1000
@@ -49,16 +70,61 @@ class SimRequest(BaseModel):
 
 @app.post("/simulate")
 def simulate(req: SimRequest):
-    # Run the existing auto simulation (writes results.txt)
-    AutoGame.auto_play_loop(
+
+    # Timer start for benchmarking
+    endpoint_start_time = time.perf_counter()
+    print("Request received")
+    sim_start = time.perf_counter()
+
+    # Run the simulation and get results as JSON
+    sim_results = AutoGame.auto_play_loop(
         num_games=req.num_games,
         balance=req.balance,
         bet_amount=req.bet_amount,
         num_decks=req.num_decks,
         input_func=lambda *args, **kwargs: None,
         output_func=lambda *args, **kwargs: None,
+        return_as_json=True
     )
-    return {"status": "ok", "num_games": req.num_games}
+
+    # timer
+    sim_end = time.perf_counter()
+    print(f"API simulation time (auto_play_loop): {sim_end - sim_start:.4f}s")
+
+    # Also save CSV + generate graph in the background
+    graph_start = time.perf_counter()
+    try:
+        import pandas as pd
+        results_df = pd.DataFrame(sim_results.get("results", []))
+        results_df.to_csv("results.csv", index=False)
+        from graph import SimGraph
+        SimGraph().generate()
+    except Exception as e:
+        print(f"Graph generation failed: {e}")
+
+    # timer    
+    graph_end = time.perf_counter()
+    print(f"API graph/CSV generation time: {graph_end - graph_start:.4f}s")
+    endpoint_end = time.perf_counter()
+    print(f"API total endpoint time: {endpoint_end - endpoint_start_time:.4f}s")
+
+    return sim_results
+
+
+@app.get("/graph")
+def get_graph():
+    graph_path = os.path.join(os.getcwd(), "simulation_graph.png")
+    if not os.path.exists(graph_path):
+        #return FileResponse(graph_path, media_type="image/png")
+        return {"error": "No graph found. Run a simulation first."}
+    return FileResponse(
+        graph_path,
+        media_type="image/png",
+        filename="simulation_graph.png",
+        headers={
+            "Access-Control-Allow-Origin": "http://localhost:5173",
+        }
+    )
 
 
 
@@ -135,7 +201,7 @@ class GameSession:
                     num_decks = int(num_decks_str)
                     output_func("Playing ", num_games, " games with balance ", balance, ", bet amount ", bet_amount, ", and ", num_decks, " decks.")
                     try:
-                        AutoGame.auto_play_loop(
+                        results_df = AutoGame.auto_play_loop(
                             num_games=num_games, 
                             balance=balance, 
                             bet_amount=bet_amount, 
@@ -143,7 +209,7 @@ class GameSession:
                             input_func=input_func,
                             output_func=output_func
                         )
-                        output_func("\nSimulation complete. You can download results.txt from the website link.")
+                        output_func("\nSimulation complete. You can download results.csv from the website link.")
                     except Exception as e:
                         output_func(f"Simulation error: {e}")
                 except ValueError:
@@ -172,3 +238,17 @@ async def websocket_endpoint(websocket: WebSocket):
 def simulate_single_hand():
     result = simulate_hand()
     return result
+
+
+@app.post("/simulate-batch")
+def run_batch_simulation(body: Dict = Body(...)):
+    count = body.get('count', 1000)
+    seed = body.get('seed')  # Optional
+    if not isinstance(count, int) or count < 1 or count > 100000:
+        raise HTTPException(status_code=400, detail="Count must be an integer between 1 and 100,000")
+
+    try:
+        results = simulate_many(count=count, seed=seed)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

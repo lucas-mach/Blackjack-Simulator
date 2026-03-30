@@ -3,6 +3,7 @@ import pandas as pd
 from openpyxl import load_workbook
 
 class AutoGame:
+    
     def count_cards(items):
         """Return Hi-Lo count for a collection which may contain hands or raw cards."""
         total = 0
@@ -31,22 +32,80 @@ class AutoGame:
                     total -= 1
         return total
 
-    def determine_strategy(card_count: int) -> str:
-        return "base_strategy.xlsx"
+    def determine_strategy(true_card_count: int) -> str:
+        """
+        Returns the appropriate blackjack strategy file based on the true card count (TCC).
         
-    def determine_bet_multiple(true_card_count: int) -> int:
-        if true_card_count >= 10:
-            return 10
-        if true_card_count >= 5:
-            return 4
+        Strategy files incorporate I18 deviations from the deviation chart:
+        
+        TCC >= 8:  13v10=SURR
+        TCC >= 7:  14v9=SURR, 15v8=SURR, 10v10=DBL
+        TCC >= 6:  10-10 vs 5=SPLIT
+        TCC >= 5:  10-10 vs 6=SPLIT, 14vA=SURR, 9v7=DBL, 10vA=DBL
+        TCC >= 4:  16v8=SURR
+        TCC >= 3:  14v10=SURR, 12v2=STAND
+        TCC >= 2:  15v9=SURR, 15vA=SURR, 9v2=DBL, 11vA=DBL(already base), 12v3=STAND
+        TCC >= 0:  15v10=SURR, 16vA=SURR
+        TCC >= -1: 16v9=SURR, 16v10=SURR
+        TCC >= -1: 12v6=STAND (base=S, else Hit), 13v2=STAND (base=S, else Hit)
+        TCC >= -2: 12v5=STAND (base=S, else Hit), 13v3=STAND (base=S, else Hit)
+        TCC >= -2: 12v4=STAND (base=S, else Hit at TCC < 0)
+        """
+        if true_card_count >= 8:
+            return "strategies/strategy_tcc_8plus.xlsx"
+        elif true_card_count >= 7:
+            return "strategies/strategy_tcc_7.xlsx"
+        elif true_card_count >= 6:
+            return "strategies/strategy_tcc_6.xlsx"
+        elif true_card_count >= 5:
+            return "strategies/strategy_tcc_5.xlsx"
+        elif true_card_count >= 4:
+            return "strategies/strategy_tcc_4.xlsx"
+        elif true_card_count >= 3:
+            return "strategies/strategy_tcc_3.xlsx"
         elif true_card_count >= 2:
-            return 2
+            return "strategies/strategy_tcc_2.xlsx"
         elif true_card_count >= 0:
-            return 1
-        elif true_card_count >= -5:
-            return 1
+            return "strategies/strategy_tcc_0_1.xlsx"
+        elif true_card_count >= -1:
+            return "strategies/strategy_tcc_neg1.xlsx"
+        elif true_card_count >= -2:
+            return "strategies/strategy_tcc_neg2.xlsx"
         else:
-            return 0
+            return "strategies/strategy_tcc_under_neg2.xlsx"
+
+            
+    def determine_bet_multiple(true_count: int) -> int:
+        """
+        Bet spread based on the Kelly Criterion and professional Hi-Lo counting strategy.
+        Uses a 1-12 unit spread, the most common among professional counters.
+        
+        True Count | Bet (units) | Player Edge (approx)
+        -----------|-------------|---------------------
+            < 1   |      1      |   House edge
+            1   |      2      |   ~0%  (break even)
+            2   |      4      |   ~0.5%
+            3   |      6      |   ~1.0%
+            4   |      8      |   ~1.5%
+            5   |      10     |   ~2.0%
+            6+   |      12     |   ~2.5%+
+        -----------|-------------|---------------------
+        Negative counts: table minimum (sit out if allowed)
+        """
+        BET_RAMP = {
+            1: 2,
+            2: 4,
+            3: 6,
+            4: 8,
+            5: 10,
+        }
+        
+        if true_count <= 0:
+            return 1   # Minimum bet — house has the edge
+        if true_count >= 6:
+            return 12  # Maximum bet — Kelly-optimal cap
+        
+        return BET_RAMP.get(true_count, 1)
 
     class Strategy:
         def __init__(self, path: str):
@@ -89,27 +148,56 @@ class AutoGame:
                 action = self.hard_df.iat[row, col]
                 if action == "R":
                     action = "H"  
+                if action == "RS":
+                    action = "S" 
                 if action == "D" and player_hand.num_cards() != 2:
                     action = "H"
                 return action.lower()
 
-    def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8, input_func=input, output_func=print):
+    def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8, input_func=input, output_func=print, return_as_json=False):
         if num_games <= 0:
-            output_func("Number of games must be at least 1.")
-            return
-        if num_decks <= 0:
-            output_func("Number of decks must be at least 1.")
-            return
+            if return_as_json:
+                return {"error": "Number of games must be at least 1.", "results": [], "logs": [],
+                        "final_balance": balance, "total_profit": 0}
+            else:
+                output_func("Number of games must be at least 1.")
+                return
 
         deck = Deck(num_decks)
         deck.shuffle()
         total_profit = 0
         shoe_profit = 0
         card_count = 0
-        open('results.txt', 'w').close()
-        
+        MAX_SPLITS = 4
+        # Data storage
+        results = []
+        logs = []
+
+        def local_output(*args):
+            logs.append(" ".join(map(str, args)))
+            output_func(*args)
+
+        # legacy text file removed; use csv when not returning json
+        #if not return_as_json:
+        #    open('results.txt', 'w').close()
+
+        all_paths = [
+            "strategies/strategy_tcc_8plus.xlsx",
+            "strategies/strategy_tcc_7.xlsx",
+            "strategies/strategy_tcc_6.xlsx",
+            "strategies/strategy_tcc_5.xlsx",
+            "strategies/strategy_tcc_4.xlsx",
+            "strategies/strategy_tcc_3.xlsx",
+            "strategies/strategy_tcc_2.xlsx",
+            "strategies/strategy_tcc_0_1.xlsx",
+            "strategies/strategy_tcc_neg1.xlsx",
+            "strategies/strategy_tcc_neg2.xlsx",
+            "strategies/strategy_tcc_under_neg2.xlsx",
+        ]
+        strategies = {path: AutoGame.Strategy(path) for path in all_paths}
+
         strategy_path = AutoGame.determine_strategy(0)
-        strategy = AutoGame.Strategy(strategy_path)
+        strategy = strategies[strategy_path]
 
         for i in range(num_games):
             if balance <= 0:
@@ -121,7 +209,9 @@ class AutoGame:
 
             true_card_count = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
             base_bet = bet_amount * AutoGame.determine_bet_multiple(true_card_count)
-            
+            #base_bet = max(base_bet, bet_amount)   # <----------TESTING ONLY
+
+
             # Bet max if money is less than bet
             modified_bet_amount = min(base_bet, balance)
             
@@ -139,11 +229,11 @@ class AutoGame:
             new_strategy_path = AutoGame.determine_strategy(true_card_count)
             if new_strategy_path != strategy_path:
                 strategy_path = new_strategy_path
-                strategy = AutoGame.Strategy(strategy_path)
+                strategy = strategies[strategy_path]
 
             game = deck.new_game()
             # Pass balance MINUS initial bet to played_hand for splits/doubles
-            round_result = AutoGame.played_hand(game, modified_bet_amount, balance - modified_bet_amount, strategy, input_func=input_func, output_func=output_func)
+            round_result = AutoGame.played_hand(game, modified_bet_amount, balance - modified_bet_amount, strategy, input_func=input_func, output_func=output_func, MAX_SPLITS=MAX_SPLITS)
             
             profit = Game.interpret_result(round_result)
             balance += profit
@@ -152,9 +242,20 @@ class AutoGame:
             
             card_count += Game.interpret_card_count(round_result)
             
+            # Compute actual total bet placed this hand (handles splits & doubles)
+            if isinstance(round_result, list):
+                actual_bet = sum(r[1] for r in round_result)
+            else:
+                actual_bet = round_result[1]
+            
             true_card_count_log = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
-            with open('results.txt', 'a') as f:
-                f.write(f"hand{i}: balance: {balance} card count: {card_count} \"True\" card count: {true_card_count_log}\n")
+            results.append({
+                "hand": i+1,
+                "balance": balance,
+                "card_count": card_count,
+                "true_count": true_card_count_log,
+                "bet": actual_bet,
+            })
             game.end_game()
             
             if len(deck.cards) < (52 * num_decks * 0.25):
@@ -164,7 +265,35 @@ class AutoGame:
                     card_count = 0
                     shoe_profit = 0
 
-    def played_hand(game, bet_amount, balance, strategy, input_func=input, output_func=print):
+        # convert accumulated rows into a pandas DataFrame and save csv
+        results_df = pd.DataFrame(results)
+        csv_saved = False
+        try:
+            results_df.to_csv('results.csv', index=False)
+            csv_saved = True
+        except Exception:
+            # if writing fails, still return dataframe
+            pass
+
+        if return_as_json:
+            return {
+                "num_games": num_games,
+                "results": results,
+                "logs": logs,
+                "final_balance": balance,
+                "total_profit": total_profit
+            }
+        else:
+            # Auto-generate the simulation graph after a console/script run
+            if csv_saved:
+                try:
+                    from graph import SimGraph
+                    SimGraph().generate()
+                except Exception as e:
+                    output_func(f"[SimGraph] Could not generate graph: {e}")
+            return results_df
+
+    def played_hand(game, bet_amount, balance, strategy, input_func=input, output_func=print, MAX_SPLITS=4):
         game.deal_initial()
         dealer_hand = game.dealer_hand
         
@@ -190,7 +319,7 @@ class AutoGame:
                     break
                     
                 # Action based on strategy
-                action = strategy.get_action(hand, dealer_hand.get_card_shown_value(), splitallowed=(len(game.player_hands) < 4))
+                action = strategy.get_action(hand, dealer_hand.get_card_shown_value(), splitallowed=(len(game.player_hands) < MAX_SPLITS))
                 
                 if action == 'h':
                     game.player_hit(handnum=i)

@@ -18,7 +18,7 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
   const ws = useRef(null);
 
   useEffect(() => {
-    ws.current = new WebSocket('ws://localhost:8010/ws/game');
+    ws.current = new WebSocket('ws://localhost:8000/ws/game');
 
     ws.current.onopen = () => {
       setConnected(true);
