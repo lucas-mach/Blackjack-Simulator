@@ -48,7 +48,12 @@ const Simulation = () => {
     }
 
     const data = await res.json();
-    setOutput(`Success! ${data.num_games} games played. Final balance: ${data.final_balance || 'unknown'}`);
+    const finalBalance = data.final_balance ?? null;
+    const gamesActuallyPlayed = data.results?.length ?? data.num_games;
+    const balanceMsg = finalBalance === 0
+      ? `You're broke! Ran out of money on game ${gamesActuallyPlayed} of ${data.num_games}.`
+      : `Success! ${data.num_games} games played. Final balance: $${finalBalance ?? 'unknown'}`;
+    setOutput(balanceMsg);
 
     // Quick save to localStorage for dashboard
     const simResult = {
