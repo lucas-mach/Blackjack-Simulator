@@ -18,17 +18,26 @@ const Navbar = () => {
     <nav className="navbar" aria-label="Main navigation">
       <ul className="navbar-items">
         <li>
-          <NavLink to="/simulation" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink class="nav-label" to="/simulation" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <span class="material-symbols-outlined nav-icon">
+            memory
+          </span>
             Simulation Mode
           </NavLink>
         </li>
         <li>
-          <NavLink to="/trainer" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink class="nav-label" to="/trainer" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <span class="material-symbols-outlined nav-icon">
+            model_training
+          </span>
             Trainer Mode
           </NavLink>
         </li>
         <li>
-          <NavLink to="/graph" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink class="nav-label" to="/graph" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <span class="material-symbols-outlined nav-icon">
+            finance_mode
+          </span>
             Graph (Testing)
           </NavLink>
         </li>
