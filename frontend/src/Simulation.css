@@ -1,0 +1,266 @@
+.app-container.simulation-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.header-wrap {
+  text-align: left;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.header-block-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  align-self: stretch;
+  text-align: left;
+}
+
+.bet-edit-icon {
+  font-size: 4rem;
+}
+
+.bet-edit-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.header-title-wrap {
+  width: 100%;
+}
+
+.section-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1rem;
+  height: 13rem;
+  margin-bottom: 1rem;
+}
+
+.section-wrap--results {
+  height: auto;
+}
+
+.section-block-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px solid var(--mid);
+  border-radius: 1.5rem;
+  background-color: var(--dark02);
+  height: 100%;
+}
+
+.section-block-wrap.results {
+  width: 100%;
+  height: auto;
+}
+
+.section-block-title-wrap {
+  text-align: left;
+}
+
+.section-block-content-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+}
+
+.results-content-wrap {
+  gap: 0;
+}
+
+.simulation-form {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.simulation-heading {
+  margin: 0 0 1.5rem 0;
+  text-align: left;
+  color: var(--mid);
+}
+
+.simulation-label {
+  color: var(--light01);
+  font-size: var(--font-size-label);
+  white-space: nowrap;
+}
+
+.simulation-label--games {
+  margin-right: 0.5rem;
+}
+
+.simulation-label--balance {
+  margin-right: 5.1rem;
+}
+
+.simulation-label--bet {
+  margin-right: 3.2rem;
+}
+
+.simulation-label--decks {
+  margin-right: 0.7rem;
+}
+
+.simulation-output-line {
+  margin-bottom: 1rem;
+}
+
+.results-scroll {
+  height: 20rem;
+  overflow-y: auto;
+  width: 100%;
+  scrollbar-color: var(--mid) transparent;
+}
+
+.results-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.results-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.results-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--mid);
+  border-radius: 999px;
+}
+
+.simulation-results-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.simulation-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: calc(var(--font-size-body) * 0.9);
+}
+
+.simulation-results-thead {
+  position: sticky;
+  top: 0;
+  background-color: var(--dark02);
+  z-index: 1;
+}
+
+.simulation-results-th {
+  padding: 8px;
+  border-bottom: 1px solid var(--mid);
+  color: var(--accent02);
+}
+
+.simulation-results-tr {
+  border-bottom: 1px solid var(--mid);
+}
+
+.simulation-results-td {
+  padding: 6px 8px;
+  color: var(--light02);
+}
+
+.simulation-graph-wrap {
+  margin-top: 1rem;
+  text-align: center;
+  width: 100%;
+}
+
+.simulation-graph-img {
+  max-width: 100%;
+  border: 2px solid var(--mid);
+  border-radius: 0.5rem;
+}
+
+.simulation-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.simulation-modal {
+  background: var(--dark02);
+  border: 2px solid var(--mid);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  width: min(90vw, 420px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.simulation-modal-title {
+  margin: 0;
+  color: var(--light01);
+}
+
+.simulation-modal-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.simulation-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.run-btn {
+  background-color: var(--accent02);
+  border: 2px solid var(--accent02);
+}
+
+.run-btn:hover {
+  background-color: var(--dark01);
+  color: var(--accent02);
+}
+
+.graph-btn {
+  background-color: var(--accent01);
+  border: 2px solid var(--accent01);
+}
+
+.graph-btn:hover {
+  background-color: var(--dark01);
+  color: var(--accent01);
+}
+
+.results-btn, .cancel-btn {
+  background-color: var(--dark02);
+  border: 2px solid var(--mid);
+  color: var(--light02);
+}
+
+.results-btn:hover, .cancel-btn:hover {
+  background-color: var(--dark01);
+  color: var(--light01);
+}

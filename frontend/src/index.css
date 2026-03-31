@@ -9,6 +9,7 @@
   --accent02: #7EA16B;
 
   /* Typography */
+  --font-size-label: 0.8rem;
   --font-size-body: 1rem;
   --font-size-h1: 3rem;
   --font-size-h2: 1.2rem;
@@ -41,16 +42,38 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  scrollbar-color: var(--mid) transparent;
+}
+
+body::-webkit-scrollbar {
+  width: 10px;
+}
+
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body::-webkit-scrollbar-thumb {
+  background-color: var(--mid);
+  border-radius: 999px;
 }
 
 h1 {
   font-size: var(--font-size-h1);
   font-weight: var(--font-weight-bold);
+  margin: 0 0 -0.5rem 0;
 }
 
 h2 {
   font-size: var(--font-size-h2);
   font-weight: var(--font-weight-regular);
+}
+
+p {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  color: var(--light02);
+  margin: 0;
 }
 
 .h1-sub {
@@ -61,4 +84,42 @@ h2 {
 button {
   font-size: var(--font-size-button);
   font-weight: var(--font-weight-medium);
+}
+
+input {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  color: var(--light01);
+  background-color: var(--dark01);
+  border: 2px solid var(--mid);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+input::placeholder {
+  color: var(--mid);
+}
+
+/* Remove number input spinner arrows */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+button {
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-medium);
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark01);
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  white-space: nowrap;
 }

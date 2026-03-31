@@ -22,7 +22,7 @@ const Navbar = () => {
           <span class="material-symbols-outlined nav-icon">
             memory
           </span>
-            Simulation Mode
+            Simulate
           </NavLink>
         </li>
         <li>
@@ -30,7 +30,7 @@ const Navbar = () => {
           <span class="material-symbols-outlined nav-icon">
             model_training
           </span>
-            Trainer Mode
+            Training
           </NavLink>
         </li>
         <li>
