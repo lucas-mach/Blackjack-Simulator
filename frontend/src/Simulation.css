@@ -65,6 +65,10 @@
   height: 100%;
 }
 
+.controls {
+  width: 100%;
+}
+
 .section-block-wrap.results {
   width: 100%;
   height: auto;

@@ -239,7 +239,6 @@
   display: flex;
   justify-content: space-between;
   width: 100%;
-  max-width: 720px;
   padding: 0 16px;
 }
 
