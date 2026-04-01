@@ -31,8 +31,22 @@ const labelStyle = {
   display: 'inline-block',
 };
 
+const tinyBtn = {
+  padding: '3px 9px',
+  fontSize: '0.75rem',
+  borderRadius: '4px',
+  border: '1px solid #444',
+  background: '#222',
+  color: '#aaa',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+};
+
 const Dashboard = () => {
   const [recentSims, setRecentSims] = useState([]);
+  const [showUpload, setShowUpload] = useState(false);
+  const [pendingRules, setPendingRules] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
   const [rules, setRules] = useState(() => {
     try {
       const saved = localStorage.getItem('blackjackRules');
@@ -68,6 +82,39 @@ const Dashboard = () => {
   };
 
   const formatCurrency = (num) => `$${Math.round(num).toLocaleString()}`;
+
+  const handleDownload = () => {
+    const blob = new Blob([JSON.stringify(rules, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'blackjack-rules.bjconfig';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = (e.dataTransfer?.files ?? e.target.files)?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        setPendingRules({ ...DEFAULT_RULES, ...parsed });
+      } catch { alert('Invalid config file.'); }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirm = () => {
+    if (!pendingRules) return;
+    setRules(pendingRules);
+    localStorage.setItem('blackjackRules', JSON.stringify(pendingRules));
+    setPendingRules(null);
+    setShowUpload(false);
+  };
 
   const RuleRow = ({ label, ruleKey, options }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
@@ -190,12 +237,50 @@ const Dashboard = () => {
         marginBottom: '28px',
         boxShadow: '0 4px 12px rgba(0,255,157,0.06)'
       }}>
-        <h2 style={{ color: '#00ff9d', marginTop: 0, marginBottom: '16px', fontSize: '1.1rem' }}>
+        <h2 style={{ color: '#00ff9d', marginTop: 0, marginBottom: '16px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           ⚙️ Game Rules
-          <span style={{ color: '#555', fontWeight: 'normal', fontSize: '0.8rem', marginLeft: '10px' }}>
+          <span style={{ color: '#555', fontWeight: 'normal', fontSize: '0.8rem' }}>
             (applied to both Simulation and Interactive modes)
           </span>
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+            <button onClick={handleDownload} title="Download rules as .bjconfig" style={tinyBtn}>
+              ⬇ Export
+            </button>
+            <button onClick={() => { setShowUpload(v => !v); setPendingRules(null); }} title="Upload a .bjconfig file" style={tinyBtn}>
+              ⬆ Import
+            </button>
+          </span>
         </h2>
+        {showUpload && (
+          <div style={{ marginBottom: '14px' }}>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleFileDrop}
+              style={{
+                border: `2px dashed ${dragOver ? '#00ff9d' : '#444'}`,
+                borderRadius: '6px',
+                padding: '16px',
+                textAlign: 'center',
+                color: dragOver ? '#00ff9d' : '#666',
+                fontSize: '0.85rem',
+                transition: 'all 0.15s',
+                cursor: 'pointer',
+              }}
+              onClick={() => document.getElementById('bjconfig-input').click()}
+            >
+              {pendingRules
+                ? '✅ File loaded — click Confirm to apply'
+                : 'Drop a .bjconfig file here, or click to browse'}
+              <input id="bjconfig-input" type="file" accept=".bjconfig,.json" hidden onChange={handleFileDrop} />
+            </div>
+            {pendingRules && (
+              <button onClick={handleConfirm} style={{ ...tinyBtn, marginTop: '8px', background: '#00ff9d', color: '#000', fontWeight: 'bold' }}>
+                ✔ Confirm
+              </button>
+            )}
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '4px 40px' }}>
           <RuleRow
