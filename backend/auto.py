@@ -1,6 +1,50 @@
 from bj import Game, PlayerHand, DealerHand, Deck, Card
 import pandas as pd
 from openpyxl import load_workbook
+import copy
+
+# Ordered from highest TCC to lowest (matches determine_strategy priority)
+_TCC_KEY_THRESHOLDS = [
+    ('tcc_8plus',       8),
+    ('tcc_7',           7),
+    ('tcc_6',           6),
+    ('tcc_5',           5),
+    ('tcc_4',           4),
+    ('tcc_3',           3),
+    ('tcc_2',           2),
+    ('tcc_0_1',         0),
+    ('tcc_neg1',       -1),
+    ('tcc_neg2',       -2),
+    ('tcc_under_neg2', -3),
+]
+
+_TCC_BASE_PATH = 'strategies/strategy_tcc_0_1.xlsx'
+
+
+def _resolve_strategy_key(true_count: float, strategy_overrides: dict, tcc_key_to_path: dict) -> str:
+    """Resolve the strategy file path for a given TCC when user-defined override rows exist.
+
+    Rules:
+    - Empty dict  -> use base strategy (tcc_0_1)
+    - Has entries -> prefer highest defined threshold that is <= true_count (i.e. 'at or below').
+                     If none are <= true_count, use the lowest defined threshold (floor fallback).
+    """
+    if not strategy_overrides:           # {} or None -> base strategy
+        return tcc_key_to_path.get('tcc_0_1', _TCC_BASE_PATH)
+
+    defined = [(k, t) for k, t in _TCC_KEY_THRESHOLDS if k in strategy_overrides]
+    if not defined:
+        return tcc_key_to_path.get('tcc_0_1', _TCC_BASE_PATH)
+
+    # Prefer highest threshold that is still <= current count
+    below = [(k, t) for k, t in defined if t <= true_count]
+    if below:
+        best_key = max(below, key=lambda x: x[1])[0]   # highest threshold <= count
+    else:
+        best_key = min(defined, key=lambda x: x[1])[0]  # floor: lowest defined
+
+    return tcc_key_to_path.get(best_key, _TCC_BASE_PATH)
+
 
 class AutoGame:
     
@@ -154,7 +198,29 @@ class AutoGame:
                     action = "H"
                 return action.lower()
 
-    def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8, input_func=input, output_func=print, return_as_json=False):
+        def apply_overrides(self, overrides: dict):
+            """Return a new Strategy with specific cells patched.
+            overrides = {hard: [[row, col, val], ...], soft: [...], split: [...]}
+            """
+            new_strat = copy.copy(self)
+            new_strat.hard_df = self.hard_df.copy()
+            new_strat.soft_df = self.soft_df.copy()
+            new_strat.split_df = self.split_df.copy()
+            for r, c, v in overrides.get('hard', []):
+                new_strat.hard_df.iat[int(r), int(c)] = str(v).upper()
+            for r, c, v in overrides.get('soft', []):
+                new_strat.soft_df.iat[int(r), int(c)] = str(v).upper()
+            for r, c, v in overrides.get('split', []):
+                new_strat.split_df.iat[int(r), int(c)] = str(v).upper()
+            return new_strat
+
+    def auto_play_loop(bet_amount=1, num_games=100, balance=1000, num_decks=8,
+                       input_func=input, output_func=print, return_as_json=False,
+                       rules=None,
+                       bet_ramp=None,
+                       strategy_overrides=None,
+                       insurance_threshold=None,
+                       use_base_strategy_only=False):
         if num_games <= 0:
             if return_as_json:
                 return {"error": "Number of games must be at least 1.", "results": [], "logs": [],
@@ -196,6 +262,26 @@ class AutoGame:
         ]
         strategies = {path: AutoGame.Strategy(path) for path in all_paths}
 
+        # Apply any user strategy overrides per TCC key
+        TCC_KEY_TO_PATH = {
+            'tcc_8plus':       'strategies/strategy_tcc_8plus.xlsx',
+            'tcc_7':           'strategies/strategy_tcc_7.xlsx',
+            'tcc_6':           'strategies/strategy_tcc_6.xlsx',
+            'tcc_5':           'strategies/strategy_tcc_5.xlsx',
+            'tcc_4':           'strategies/strategy_tcc_4.xlsx',
+            'tcc_3':           'strategies/strategy_tcc_3.xlsx',
+            'tcc_2':           'strategies/strategy_tcc_2.xlsx',
+            'tcc_0_1':         'strategies/strategy_tcc_0_1.xlsx',
+            'tcc_neg1':        'strategies/strategy_tcc_neg1.xlsx',
+            'tcc_neg2':        'strategies/strategy_tcc_neg2.xlsx',
+            'tcc_under_neg2':  'strategies/strategy_tcc_under_neg2.xlsx',
+        }
+        if strategy_overrides:
+            for tcc_key, overrides in strategy_overrides.items():
+                path = TCC_KEY_TO_PATH.get(tcc_key)
+                if path and path in strategies:
+                    strategies[path] = strategies[path].apply_overrides(overrides)
+
         strategy_path = AutoGame.determine_strategy(0)
         strategy = strategies[strategy_path]
 
@@ -208,7 +294,19 @@ class AutoGame:
                 output_func(f"Progress: {i}/{num_games} games completed. Current Balance: {balance}")
 
             true_card_count = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
-            base_bet = bet_amount * AutoGame.determine_bet_multiple(true_card_count)
+
+            # Custom bet ramp: list of 7 multipliers [le0, 1, 2, 3, 4, 5, ge6]
+            if bet_ramp and len(bet_ramp) >= 7:
+                tcc_int = int(true_card_count)
+                if tcc_int <= 0:
+                    mult = bet_ramp[0]
+                elif tcc_int >= 6:
+                    mult = bet_ramp[6]
+                else:
+                    mult = bet_ramp[min(tcc_int, 5)]
+            else:
+                mult = AutoGame.determine_bet_multiple(true_card_count)
+            base_bet = bet_amount * mult
             #base_bet = max(base_bet, bet_amount)   # <----------TESTING ONLY
 
 
@@ -226,7 +324,16 @@ class AutoGame:
                 shoe_profit = 0
                 continue
             
-            new_strategy_path = AutoGame.determine_strategy(true_card_count)
+            # Strategy selection: respect user-defined override rows if present
+            if strategy_overrides is not None:
+                # User has configured the strategy editor (even if empty = base fallback)
+                new_strategy_path = _resolve_strategy_key(
+                    true_card_count, strategy_overrides, TCC_KEY_TO_PATH
+                )
+            elif use_base_strategy_only:
+                new_strategy_path = AutoGame.determine_strategy(0)  # always tcc_0_1
+            else:
+                new_strategy_path = AutoGame.determine_strategy(true_card_count)
             if new_strategy_path != strategy_path:
                 strategy_path = new_strategy_path
                 strategy = strategies[strategy_path]
@@ -234,8 +341,20 @@ class AutoGame:
             game = deck.new_game()
             # Pass balance MINUS initial bet to played_hand for splits/doubles
             round_result = AutoGame.played_hand(game, modified_bet_amount, balance - modified_bet_amount, strategy, input_func=input_func, output_func=output_func, MAX_SPLITS=MAX_SPLITS)
-            
-            profit = Game.interpret_result(round_result)
+
+            # Insurance side-bet: applied after hand is played, dealer cards already known
+            ins_profit = 0
+            if (insurance_threshold is not None and
+                    true_card_count >= insurance_threshold and
+                    len(game.dealer_hand.cards) > 0 and
+                    game.dealer_hand.cards[0].rank == 'A'):
+                ins_bet = modified_bet_amount * 0.5
+                if game.dealer_hand.blackjack():
+                    ins_profit = ins_bet * 2   # 2:1 payout (net +ins_bet)
+                else:
+                    ins_profit = -ins_bet
+
+            profit = Game.interpret_result(round_result) + ins_profit
             balance += profit
             total_profit += profit
             shoe_profit += profit
