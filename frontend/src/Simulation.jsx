@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ResultsChart from './ResultsChart';
 import './App.css';
 
 // ── TCC levels exposed in the strategy editor ─────────────────────────────────
@@ -39,7 +40,7 @@ const Simulation = () => {
   const [balance, setBalance] = useState(1000);
   const [betAmount, setBetAmount] = useState(10);
   const [numDecks, setNumDecks] = useState(8);
-  const [graphUrl, setGraphUrl] = useState(null);
+  const [showGraph, setShowGraph] = useState(false);
 
   // ── New optional overrides ────────────────────────────────────────────────
   const [insuranceThreshold, setInsuranceThreshold] = useState('');
@@ -397,7 +398,14 @@ const Simulation = () => {
 
       {/* Strategy Editor ───────────────────────────────────────────── */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <button onClick={() => setShowStrategy(v => !v)}
+        <button onClick={() => {
+          if (!showStrategy && stratRows.length === 0) {
+            // Auto-populate all TCC levels with default (empty overrides) on first open
+            setStratRows(TCC_KEYS.map(t => ({ key: t.key, label: t.label, expanded: false, cells: { hard: {}, soft: {}, split: {} } })));
+            TCC_KEYS.forEach(t => loadStrategyCache(t.key));
+          }
+          setShowStrategy(v => !v);
+        }}
           style={{ background: 'none', border: 'none', color: '#00ff9d', cursor: 'pointer', fontSize: '0.95rem', padding: 0 }}>
           {showStrategy ? '▾' : '▸'} Strategy Editor
         </button>
@@ -532,8 +540,8 @@ const Simulation = () => {
         <button className="run-btn" onClick={fetchResults}>
           View Results (on webpage)
         </button>
-        <button className="run-btn" onClick={() => setGraphUrl(`http://localhost:8000/graph?t=${new Date().getTime()}`)}>
-          View Graph
+        <button className="run-btn" onClick={() => setShowGraph(v => !v)}>
+          {showGraph ? 'Hide Graph' : 'View Graph'}
         </button>
         <div className="results-link" style={{ marginTop: '2rem', textAlign: 'center' }}>
           <a
@@ -572,11 +580,40 @@ const Simulation = () => {
           </div>
         )}
       </div>
-      {graphUrl && (
-        <div style={{ marginTop: '2rem', textAlign: 'center', width: '100%' }}>
-          <img src={graphUrl} alt="Simulation Graph" style={{ maxWidth: '100%', border: '1px solid #444', borderRadius: '4px' }} />
-        </div>
-      )}
+      {showGraph && (() => {
+        const saved = localStorage.getItem('blackjackSimResults');
+        let latestSim = null;
+        try { const arr = JSON.parse(saved || '[]'); latestSim = arr.length > 0 ? arr[arr.length - 1] : null; } catch {}
+        if (!latestSim) return (
+          <div style={{ marginTop: '1.5rem', color: '#555', fontSize: '0.9rem', textAlign: 'center' }}>
+            No simulation data yet — run a simulation first.
+          </div>
+        );
+        return (
+          <div style={{ marginTop: '1.5rem' }}>
+            {latestSim.balanceHistory && (
+              <ResultsChart
+                data={latestSim.balanceHistory}
+                title="Bankroll Over Time"
+                dataKey="balance"
+                xKey="handNumber"
+                yLabel="Balance ($)"
+                xLabel="Hand Number"
+              />
+            )}
+            {latestSim.trueCountHistory && (
+              <ResultsChart
+                data={latestSim.trueCountHistory}
+                title="True Count Timeline"
+                dataKey="trueCount"
+                xKey="handNumber"
+                yLabel="True Count"
+                xLabel="Hand Number"
+              />
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };
