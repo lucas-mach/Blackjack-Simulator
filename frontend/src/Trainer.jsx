@@ -6,6 +6,8 @@ const Trainer = () => {
 
   const handleGameComplete = () => {
     setHandCount(prev => prev + 1);
+    // NOTE: Do NOT change Terminal's key here — that would remount the component
+    // and open a new WebSocket, resetting the backend game session and balance.
   };
 
   return (
@@ -13,7 +15,7 @@ const Trainer = () => {
       <div style={{ textAlign: 'center', marginBottom: '1rem', color: '#ddd' }}>
         <h2>Blackjack Trainer - Hand {handCount}</h2>
       </div>
-      <Terminal key={handCount} autoSelect={true} onGameComplete={handleGameComplete} />
+      <Terminal autoSelect={true} onGameComplete={handleGameComplete} />
       
     </div>
   );
