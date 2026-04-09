@@ -11,7 +11,7 @@ import os
 from engine import simulate_hand, simulate_many
 import json
 import time
-from typing import Dict
+from typing import Dict, List, Optional
 
 app = FastAPI(title="Blackjack Simulator API")
 
@@ -60,12 +60,57 @@ def get_results():
         }
     )
 
+# ── Strategy config ────────────────────────────────────────────────────────────
+TCC_FILES = {
+    'tcc_8plus':      'strategies/strategy_tcc_8plus.xlsx',
+    'tcc_7':          'strategies/strategy_tcc_7.xlsx',
+    'tcc_6':          'strategies/strategy_tcc_6.xlsx',
+    'tcc_5':          'strategies/strategy_tcc_5.xlsx',
+    'tcc_4':          'strategies/strategy_tcc_4.xlsx',
+    'tcc_3':          'strategies/strategy_tcc_3.xlsx',
+    'tcc_2':          'strategies/strategy_tcc_2.xlsx',
+    'tcc_0_1':        'strategies/strategy_tcc_0_1.xlsx',
+    'tcc_neg1':       'strategies/strategy_tcc_neg1.xlsx',
+    'tcc_neg2':       'strategies/strategy_tcc_neg2.xlsx',
+    'tcc_under_neg2': 'strategies/strategy_tcc_under_neg2.xlsx',
+}
+
+HARD_ROW_LABELS  = ["H4","H5","H6","H7","H8","H9","H10","H11","H12","H13","H14","H15","H16","H17","H18","H19","H20","H21"]
+SOFT_ROW_LABELS  = ["S12","S13","S14","S15","S16","S17","S18","S19","S20","S21"]
+SPLIT_ROW_LABELS = ["2-2","3-3","4-4","5-5","6-6","7-7","8-8","9-9","10-10","A-A"]
+DEALER_COL_LABELS = ["2","3","4","5","6","7","8","9","10","A"]
+
+
+@app.get("/strategy/{tcc_key}")
+def get_strategy(tcc_key: str):
+    """Return the hard/soft/split strategy tables for a given TCC level as JSON."""
+    path = TCC_FILES.get(tcc_key)
+    if not path:
+        raise HTTPException(status_code=404, detail=f"Unknown TCC key: {tcc_key}")
+    try:
+        strat = AutoGame.Strategy(path)
+        return {
+            "tcc_key": tcc_key,
+            "row_labels": {"hard": HARD_ROW_LABELS, "soft": SOFT_ROW_LABELS, "split": SPLIT_ROW_LABELS},
+            "col_labels": DEALER_COL_LABELS,
+            "hard":  strat.hard_df.values.tolist(),
+            "soft":  strat.soft_df.values.tolist(),
+            "split": strat.split_df.values.tolist(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 class SimRequest(BaseModel):
     num_games: int = 1000
     balance: int = 1000
     bet_amount: int = 10
     num_decks: int = 8
+    # Optional simulation overrides
+    bet_ramp: Optional[List[float]] = None          # 7 multipliers: [le0, 1, 2, 3, 4, 5, ge6]
+    strategy_overrides: Optional[Dict[str, dict]] = None  # {tcc_key: {hard:[[r,c,v],...], ...}}
+    insurance_threshold: Optional[float] = None    # take insurance when TCC >= this value
+    use_base_strategy_only: bool = False           # ignore TCC deviations, always use tcc_0_1
 
 
 @app.post("/simulate")
@@ -84,7 +129,11 @@ def simulate(req: SimRequest):
         num_decks=req.num_decks,
         input_func=lambda *args, **kwargs: None,
         output_func=lambda *args, **kwargs: None,
-        return_as_json=True
+        return_as_json=True,
+        bet_ramp=req.bet_ramp,
+        strategy_overrides=req.strategy_overrides,
+        insurance_threshold=req.insurance_threshold,
+        use_base_strategy_only=req.use_base_strategy_only,
     )
 
     # timer

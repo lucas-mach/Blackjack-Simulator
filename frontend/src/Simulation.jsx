@@ -2,6 +2,38 @@ import React, { useState } from 'react';
 import './App.css';
 import './Simulation.css';
 
+// ── TCC levels exposed in the strategy editor ─────────────────────────────────
+const TCC_KEYS = [
+  { key: 'tcc_8plus',      label: 'TCC ≥ 8'   },
+  { key: 'tcc_7',          label: 'TCC 7'      },
+  { key: 'tcc_6',          label: 'TCC 6'      },
+  { key: 'tcc_5',          label: 'TCC 5'      },
+  { key: 'tcc_4',          label: 'TCC 4'      },
+  { key: 'tcc_3',          label: 'TCC 3'      },
+  { key: 'tcc_2',          label: 'TCC 2'      },
+  { key: 'tcc_0_1',        label: 'TCC 0–1'    },
+  { key: 'tcc_neg1',       label: 'TCC −1'     },
+  { key: 'tcc_neg2',       label: 'TCC −2'     },
+  { key: 'tcc_under_neg2', label: 'TCC < −2'   },
+];
+
+const DEFAULT_BET_RAMP = [1, 2, 4, 6, 8, 10, 12];
+const BET_RAMP_LABELS  = ['≤ 0', '1', '2', '3', '4', '5', '≥ 6'];
+
+// Cell colour coding
+const ACTION_COLORS = {
+  H:  '#1a1a1a', S:  '#1f3a5f', D:  '#5c3a00',
+  DS: '#5c3a00', R:  '#4a0000', RS: '#4a0000',
+  Y:  '#1a3a1a',
+};
+
+const TOOL_BTN = {
+  padding: '3px 10px', fontSize: '0.78rem', borderRadius: '4px',
+  border: '1px solid #444', background: '#222', color: '#aaa',
+  cursor: 'pointer', whiteSpace: 'nowrap',
+};
+
+
 const Simulation = () => {
   const [output, setOutput] = useState('');
   const [numGames, setNumGames] = useState('');
@@ -12,6 +44,106 @@ const Simulation = () => {
   const [isBetBalanceModalOpen, setIsBetBalanceModalOpen] = useState(false);
   const [draftBalance, setDraftBalance] = useState('');
   const [draftBetAmount, setDraftBetAmount] = useState('');
+
+  // ── New optional overrides ────────────────────────────────────────────────
+  const [insuranceThreshold, setInsuranceThreshold] = useState('');
+  const [useBaseStrategyOnly, setUseBaseStrategyOnly] = useState(false);
+  const [betRamp, setBetRamp] = useState([...DEFAULT_BET_RAMP]);
+  const [showBetRamp, setShowBetRamp] = useState(false);
+  const [showStrategy, setShowStrategy] = useState(false);
+  // New row-based strategy editor state
+  const [stratRows, setStratRows] = useState([]);       // [{key, label, expanded, cells:{hard,soft,split}}]
+  const [stratCache, setStratCache] = useState({});     // {tcc_key: raw backend data}
+  const [stratLoading, setStratLoading] = useState(false);
+  const [showAddRow, setShowAddRow] = useState(false);
+  const [addRowKey, setAddRowKey] = useState('tcc_0_1');
+  const [addRowFrom, setAddRowFrom] = useState('tcc_0_1');
+
+  const loadStrategyCache = async (tcc_key) => {
+    if (stratCache[tcc_key]) return stratCache[tcc_key];
+    setStratLoading(true);
+    try {
+      const res = await fetch(`http://localhost:8000/strategy/${tcc_key}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStratCache(prev => ({ ...prev, [tcc_key]: data }));
+        setStratLoading(false);
+        return data;
+      }
+    } catch {}
+    setStratLoading(false);
+    return null;
+  };
+
+  const toggleRowExpanded = async (idx) => {
+    const row = stratRows[idx];
+    if (!row.expanded) await loadStrategyCache(row.key);
+    setStratRows(prev => prev.map((r, i) => i === idx ? { ...r, expanded: !r.expanded } : r));
+  };
+
+  const addStratRow = async () => {
+    if (stratRows.find(r => r.key === addRowKey)) return;
+    const srcRow = stratRows.find(r => r.key === addRowFrom);
+    const newCells = srcRow ? JSON.parse(JSON.stringify(srcRow.cells)) : { hard: {}, soft: {}, split: {} };
+    const newLabel = TCC_KEYS.find(t => t.key === addRowKey)?.label || addRowKey;
+    setStratRows(prev => {
+      const order = TCC_KEYS.map(t => t.key);
+      const all = [...prev, { key: addRowKey, label: newLabel, expanded: true, cells: newCells }];
+      return all.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+    });
+    setShowAddRow(false);
+    await loadStrategyCache(addRowKey);
+  };
+
+  const deleteStratRow = (idx) => setStratRows(prev => prev.filter((_, i) => i !== idx));
+
+  const setCellValue = (rowIdx, tab, ck, val) => {
+    setStratRows(prev => prev.map((r, i) => i !== rowIdx ? r : {
+      ...r, cells: { ...r.cells, [tab]: { ...(r.cells[tab] || {}), [ck]: val } }
+    }));
+  };
+
+  const restoreDefaults = () => {
+    setStratRows(TCC_KEYS.map(t => ({ key: t.key, label: t.label, expanded: false, cells: { hard: {}, soft: {}, split: {} } })));
+    TCC_KEYS.forEach(t => loadStrategyCache(t.key));
+  };
+
+  const downloadStrategyConfig = () => {
+    const cfg = { version: 1, stratRows: stratRows.map(r => ({ key: r.key, label: r.label, cells: r.cells })) };
+    const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'blackjack-strategy.bstrat' });
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+
+  const uploadStrategyConfig = (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const cfg = JSON.parse(ev.target.result);
+        const rows = (cfg.stratRows || []).map(r => ({ ...r, expanded: false }));
+        setStratRows(rows);
+        rows.forEach(r => loadStrategyCache(r.key));
+      } catch { alert('Invalid .bstrat file.'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const computeStrategyOverrides = () => {
+    if (stratRows.length === 0) return null;
+    const result = {};
+    stratRows.forEach(row => {
+      const tabData = {};
+      ['hard', 'soft', 'split'].forEach(tab => {
+        const cells = row.cells[tab] || {};
+        if (Object.keys(cells).length > 0)
+          tabData[tab] = Object.entries(cells).map(([k, v]) => { const [r, c] = k.split(',').map(Number); return [r, c, v]; });
+      });
+      if (Object.keys(tabData).length > 0) result[row.key] = tabData;
+    });
+    return Object.keys(result).length > 0 ? result : null;
+  };
 
 
   const runRestSimulation = async () => {    //<--------------------------NEW Fix: Added better catch messages
@@ -37,8 +169,14 @@ const Simulation = () => {
         balance: bal,
         bet_amount: bet,
         num_decks: decks,
+        // new optional overrides (only sent if set)
+        bet_ramp: betRamp,
+        strategy_overrides: computeStrategyOverrides(),
+        insurance_threshold: insuranceThreshold !== '' ? Number(insuranceThreshold) : null,
+        use_base_strategy_only: useBaseStrategyOnly,
       }),
     });
+
 
     if (!res.ok) {
       let errorDetail = '';
@@ -205,6 +343,9 @@ const Simulation = () => {
           <div className="section-block-content-wrap">
             <button className="run-btn" onClick={runRestSimulation}>
               Run Simulation
+            </button>
+            <button className="results-btn" onClick={openBetBalanceModal}>
+              Edit Balance/Bet
             </button>
             <button className="graph-btn" onClick={() => setGraphUrl(`http://localhost:8000/graph?t=${new Date().getTime()}`)}>
               View Graph
