@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
+import './Simulation.css';
 
 // ── TCC levels exposed in the strategy editor ─────────────────────────────────
 const TCC_KEYS = [
@@ -35,11 +36,14 @@ const TOOL_BTN = {
 
 const Simulation = () => {
   const [output, setOutput] = useState('');
-  const [numGames, setNumGames] = useState(200);
+  const [numGames, setNumGames] = useState('');
   const [balance, setBalance] = useState(1000);
   const [betAmount, setBetAmount] = useState(10);
-  const [numDecks, setNumDecks] = useState(8);
+  const [numDecks, setNumDecks] = useState('');
   const [graphUrl, setGraphUrl] = useState(null);
+  const [isBetBalanceModalOpen, setIsBetBalanceModalOpen] = useState(false);
+  const [draftBalance, setDraftBalance] = useState('');
+  const [draftBetAmount, setDraftBetAmount] = useState('');
 
   // ── New optional overrides ────────────────────────────────────────────────
   const [insuranceThreshold, setInsuranceThreshold] = useState('');
@@ -229,6 +233,26 @@ const Simulation = () => {
 
   const [resultsData, setResultsData] = useState(null);
 
+  const openBetBalanceModal = () => {
+    setDraftBalance('');
+    setDraftBetAmount('');
+    setIsBetBalanceModalOpen(true);
+  };
+
+  const closeBetBalanceModal = () => {
+    setIsBetBalanceModalOpen(false);
+  };
+
+  const saveBetBalance = () => {
+    if (draftBalance !== '') {
+      setBalance(draftBalance);
+    }
+    if (draftBetAmount !== '') {
+      setBetAmount(draftBetAmount);
+    }
+    setIsBetBalanceModalOpen(false);
+  };
+
   const fetchResults = async () => {
     try {
       const res = await fetch('http://localhost:8000/results');   //<-------------NEW Fix: Updated localhost:8010 with correct 8000
@@ -257,313 +281,116 @@ const Simulation = () => {
 //<------------------------------NEW Fix: Updated label text color so text is not same color as background, adjusted spacing between label and input box
 // <------------------------------NEW Fix: Fixed overflow negative margin after clicking View Results, can now scroll
   return (
-    <div className="app-container" style={{
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100vh',
-    padding: '50px',
-    boxSizing: 'border-box'
-  }}>
-      <h2 style={{ marginTop: '0 0 1.5rem 0', textAlign: 'left', color: '#676767' }}>Simulation Mode</h2>
-      <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1rem'}}>
-        <div>
-          <label style={{ marginRight: '0.5rem', color: '#676767' }}>Number of Games:</label>
-          <input
-            type="number"
-            value={numGames}
-            onChange={(e) => setNumGames(e.target.value)}
-            min="1"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #444',
-              backgroundColor: '#1a1a1a',
-              color: '#ffffff',
-              fontSize: '1rem',
-              width: '120px',
-            }}
-          />
+    <div className="app-container simulation-root">
+      <div className="header-wrap">
+        <div className="header-title-wrap">
+          <h1 className="simulation-header-title">Simulate</h1>
+          <p className="simulation-header-subtitle">Test Strategy Performance</p>
         </div>
-        <div>
-          <label style={{ marginRight: '5.1rem', color: '#676767' }}>Balance:</label>
-          <input
-            type="number"
-            value={balance}
-            onChange={(e) => setBalance(e.target.value)}
-            min="1"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #444',
-              backgroundColor: '#1a1a1a',
-              color: '#ffffff',
-              fontSize: '1rem',
-              width: '120px',
-            }}
-          />
+        <div className="header-block-wrap">
+          <button
+            type="button"
+            className="bet-edit-btn"
+            onClick={openBetBalanceModal}
+            aria-label="Edit bet and balance"
+          >
+            <span className="material-symbols-outlined bet-edit-icon">edit_square</span>
+          </button>
         </div>
-        <div>
-          <label style={{ marginRight: '3.2rem', color: '#676767' }}>Bet Amount:</label>
-          <input
-            type="number"
-            value={betAmount}
-            onChange={(e) => setBetAmount(e.target.value)}
-            min="1"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #444',
-              backgroundColor: '#1a1a1a',
-              color: '#ffffff',
-              fontSize: '1rem',
-              width: '120px',
-            }}
-          />
+        <div className="header-block-wrap">
+          <p className="simulation-header-subtitle">Bet:</p>
+          <h1 className="h1-sub">${betAmount}</h1>
         </div>
-        <div>
-          <label style={{ marginRight: '0.7rem', color: '#676767' }}>Number of Decks:</label>
-          <input
-            type="number"
-            value={numDecks}
-            onChange={(e) => setNumDecks(e.target.value)}
-            min="1"
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #444',
-              backgroundColor: '#1a1a1a',
-              color: '#ffffff',
-              fontSize: '1rem',
-              width: '120px',
-            }}
-          />
+        <div className="header-block-wrap">
+          <p className="simulation-header-subtitle">Balance:</p>
+          <h1 className="h1-sub">${balance}</h1>
         </div>
       </div>
-      {/* ── NEW: Advanced simulation controls ─────────────────────────────── */}
-      {/* Insurance threshold */}
-      <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <label style={{ color: '#676767' }}>Insurance when TCC ≥</label>
-        <input
-          type="number" placeholder="disabled"
-          value={insuranceThreshold}
-          onChange={e => setInsuranceThreshold(e.target.value)}
-          style={{ width: '90px', padding: '6px 10px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#1a1a1a', color: '#fff' }}
-        />
-        <span style={{ color: '#555', fontSize: '0.8rem' }}>(leave blank to disable)</span>
-        <label style={{ marginLeft: '1.5rem', color: '#676767', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-          <input type="checkbox" checked={useBaseStrategyOnly} onChange={e => setUseBaseStrategyOnly(e.target.checked)} />
-          Base strategy only (ignore TCC deviations)
-        </label>
-      </div>
-
-      {/* Bet Ramp Editor */}
-      <div style={{ marginBottom: '1rem' }}>
-        <button onClick={() => setShowBetRamp(v => !v)}
-          style={{ background: 'none', border: 'none', color: '#00ff9d', cursor: 'pointer', fontSize: '0.95rem', padding: 0 }}>
-          {showBetRamp ? '▾' : '▸'} Bet Ramp Editor
-        </button>
-        {showBetRamp && (
-          <div style={{ marginTop: '8px', display: 'inline-block' }}>
-            <table style={{ borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr>
-                  <th style={{ padding: '4px 10px', color: '#aaa', textAlign: 'left' }}>TCC</th>
-                  <th style={{ padding: '4px 10px', color: '#aaa' }}>Multiplier</th>
-                </tr>
-              </thead>
-              <tbody>
-                {BET_RAMP_LABELS.map((lbl, i) => (
-                  <tr key={i}>
-                    <td style={{ padding: '3px 10px', color: '#ccc' }}>{lbl}</td>
-                    <td style={{ padding: '3px 10px' }}>
-                      <input type="number" min="0" step="1"
-                        value={betRamp[i]}
-                        onChange={e => setBetRamp(prev => { const r=[...prev]; r[i]=Number(e.target.value); return r; })}
-                        style={{ width: '60px', padding: '3px 6px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#1a1a1a', color: '#fff', textAlign: 'center' }}
-                      />
-                      <span style={{ color: '#555', marginLeft: '4px' }}>×</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <button onClick={() => setBetRamp([...DEFAULT_BET_RAMP])}
-              style={{ marginTop: '6px', background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}>
-              Reset to default
+      <div className="section-wrap">
+        <div className="section-block-wrap">
+          <div className="section-block-title-wrap">
+            <h1 className="h1-sub">Options</h1>
+            <p>Game Settings</p>
+          </div>
+          <div className="section-block-content-wrap">
+            <label className="simulation-label simulation-label--games">Number of Games:</label>
+            <input
+              type="number"
+              className="simulation-input"
+              value={numGames}
+              onChange={(e) => setNumGames(e.target.value)}
+              placeholder="100"
+              min="1"
+            />
+          </div>
+          <div className="section-block-content-wrap">
+            <label className="simulation-label simulation-label--decks">Number of Decks:</label>
+            <input
+              type="number"
+              className="simulation-input"
+              value={numDecks}
+              onChange={(e) => setNumDecks(e.target.value)}
+              placeholder="8"
+              min="1"
+            />
+          </div>
+        </div>
+        <div className="section-block-wrap controls">
+          <div className="section-block-title-wrap">
+            <h1 className="h1-sub">Control</h1>
+            <p>Start and Edit Simulation</p>
+          </div>
+          <div className="section-block-content-wrap">
+            <button className="run-btn" onClick={runRestSimulation}>
+              Run Simulation
+            </button>
+            <button className="results-btn" onClick={openBetBalanceModal}>
+              Edit Balance/Bet
+            </button>
+            <button className="graph-btn" onClick={() => setGraphUrl(`http://localhost:8000/graph?t=${new Date().getTime()}`)}>
+              View Graph
+            </button>
+            <button className="results-btn" onClick={fetchResults}>
+              View Results
             </button>
           </div>
-        )}
-      </div>
-
-      {/* Strategy Editor ───────────────────────────────────────────── */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <button onClick={() => setShowStrategy(v => !v)}
-          style={{ background: 'none', border: 'none', color: '#00ff9d', cursor: 'pointer', fontSize: '0.95rem', padding: 0 }}>
-          {showStrategy ? '▾' : '▸'} Strategy Editor
-        </button>
-        {showStrategy && (
-          <div style={{ marginTop: '10px' }}>
-            {/* Toolbar */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
-              <button onClick={restoreDefaults} style={TOOL_BTN}>Restore Defaults</button>
-              <button onClick={() => setStratRows([{ key: 'tcc_0_1', label: 'TCC 0–1 (base)', expanded: false, cells: { hard: {}, soft: {}, split: {} } }])}
-                style={TOOL_BTN}>Base Strategy Only</button>
-              <button onClick={() => setStratRows([])} style={{ ...TOOL_BTN, color: '#ff6b6b' }}>Clear All</button>
-              <button onClick={downloadStrategyConfig} style={{ ...TOOL_BTN, marginLeft: 'auto' }}>⬇ Download .bstrat</button>
-              <label style={{ ...TOOL_BTN, cursor: 'pointer' }}>⬆ Upload .bstrat
-                <input type="file" accept=".bstrat,.json" hidden onChange={uploadStrategyConfig} />
-              </label>
-            </div>
-
-            {/* Row list */}
-            {stratRows.length === 0 && (
-              <div style={{ color: '#555', fontSize: '0.85rem', padding: '8px 0' }}>
-                No overrides configured — sim uses default Excel strategies. Click “Restore Defaults” or “+ Add Row”.
-              </div>
-            )}
-            {stratRows.map((row, idx) => (
-              <div key={row.key} style={{ border: '1px solid #2a2a2a', borderRadius: '6px', marginBottom: '6px', overflow: 'hidden' }}>
-                {/* Row header */}
-                <div style={{ display: 'flex', alignItems: 'center', padding: '5px 10px', background: '#161616', gap: '8px' }}>
-                  <button onClick={() => toggleRowExpanded(idx)}
-                    style={{ background: 'none', border: 'none', color: '#00ff9d', cursor: 'pointer', fontSize: '0.85rem', padding: 0, fontWeight: 'bold' }}>
-                    {row.expanded ? '▾' : '▸'} {row.label}
-                  </button>
-                  {['hard','soft','split'].some(tab => Object.keys(row.cells[tab]||{}).length > 0) &&
-                    <span style={{ fontSize: '0.68rem', color: '#f5a623' }}>✏ edited</span>}
-                  <button onClick={() => deleteStratRow(idx)}
-                    style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.8rem' }}>
-                    ✕ Remove
-                  </button>
-                </div>
-                {/* Tables: all 3 side by side */}
-                {row.expanded && stratCache[row.key] && (() => {
-                  const d = stratCache[row.key];
-                  return (
-                    <div style={{ padding: '8px', overflowX: 'auto' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                        {['hard','soft','split'].map(tab => {
-                          const tbl = d[tab];
-                          const rLbls = d.row_labels[tab];
-                          const cLbls = d.col_labels;
-                          const cells = row.cells[tab] || {};
-                          const OPTS = tab === 'split' ? ['Y','N'] : ['H','S','D','DS','R','RS'];
-                          return (
-                            <div key={tab}>
-                              <div style={{ color: '#777', fontSize: '0.65rem', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>{tab}</div>
-                              <table style={{ borderCollapse: 'collapse', fontSize: '0.6rem' }}>
-                                <thead>
-                                  <tr>
-                                    <th style={{ padding: '1px 3px', color: '#444' }}></th>
-                                    {cLbls.map(c => <th key={c} style={{ padding: '1px 2px', color: '#666', fontWeight: 'normal', minWidth: '26px' }}>{c}</th>)}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {tbl.map((tRow, ri) => (
-                                    <tr key={ri}>
-                                      <td style={{ padding: '1px 3px', color: '#777', fontWeight: 'bold', fontSize: '0.58rem', whiteSpace: 'nowrap' }}>{rLbls[ri]}</td>
-                                      {tRow.map((cell, ci) => {
-                                        const ck = `${ri},${ci}`;
-                                        const val = cells[ck] ?? (cell ? String(cell).toUpperCase() : 'H');
-                                        return (
-                                          <td key={ci} style={{ padding: '1px', backgroundColor: ACTION_COLORS[val] || '#1a1a1a' }}>
-                                            <select value={val} onChange={e => setCellValue(idx, tab, ck, e.target.value)}
-                                              style={{ background: 'transparent', border: 'none', color: '#ddd', fontSize: '0.6rem', cursor: 'pointer', width: '26px', padding: 0 }}>
-                                              {OPTS.map(o => <option key={o} value={o} style={{ background: '#1a1a1a' }}>{o}</option>)}
-                                            </select>
-                                          </td>
-                                        );
-                                      })}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-                {row.expanded && !stratCache[row.key] && (
-                  <div style={{ padding: '8px', color: '#555', fontSize: '0.8rem' }}>Loading strategy data…</div>
-                )}
-              </div>
-            ))}
-
-            {/* Add Row */}
-            <div style={{ marginTop: '8px' }}>
-              {!showAddRow ? (
-                <button onClick={() => setShowAddRow(true)}
-                  style={{ background: 'none', border: '1px dashed #333', color: '#555', cursor: 'pointer', fontSize: '0.82rem', padding: '4px 12px', borderRadius: '4px' }}>
-                  + Add Strategy Row
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', padding: '8px 10px', background: '#161616', borderRadius: '6px', border: '1px solid #2a2a2a' }}>
-                  <label style={{ color: '#888', fontSize: '0.78rem' }}>Level:</label>
-                  <select value={addRowKey} onChange={e => setAddRowKey(e.target.value)}
-                    style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff', fontSize: '0.78rem' }}>
-                    {TCC_KEYS.filter(t => !stratRows.find(r => r.key === t.key)).map(t => (
-                      <option key={t.key} value={t.key}>{t.label}</option>
-                    ))}
-                  </select>
-                  <label style={{ color: '#888', fontSize: '0.78rem' }}>Copy from:</label>
-                  <select value={addRowFrom} onChange={e => setAddRowFrom(e.target.value)}
-                    style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff', fontSize: '0.78rem' }}>
-                    {TCC_KEYS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-                  </select>
-                  <button onClick={addStratRow}
-                    style={{ padding: '3px 10px', borderRadius: '4px', background: '#00ff9d', color: '#000', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 'bold' }}>Add</button>
-                  <button onClick={() => setShowAddRow(false)}
-                    style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.78rem' }}>Cancel</button>
-                </div>
-              )}
-            </div>
-            {stratLoading && <div style={{ color: '#777', fontSize: '0.78rem', marginTop: '4px' }}>Loading strategy data…</div>}
+          <div className="results-link simulation-download-wrap">
+            <a
+              href="http://localhost:8000/results"     //<-------------NEW Fix: Updated localhost:8010 with correct 8000
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Download Results (results.csv)
+            </a>
           </div>
-        )}
-      </div>
-      {/* ── end advanced controls ──────────────────────────────────────────── */}
-
-      <div className="controls">
-        <button className="run-btn" onClick={runRestSimulation}>
-          Run Simulation (REST)
-        </button>
-        <button className="run-btn" onClick={fetchResults}>
-          View Results (on webpage)
-        </button>
-        <button className="run-btn" onClick={() => setGraphUrl(`http://localhost:8000/graph?t=${new Date().getTime()}`)}>
-          View Graph
-        </button>
-        <div className="results-link" style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <a
-            href="http://localhost:8000/results"     //<-------------NEW Fix: Updated localhost:8010 with correct 8000
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Download Results (results.csv)
-          </a>
         </div>
       </div>
-      <div className="info-box">
-        {output && <div style={{ marginBottom: '1rem' }}>{output}</div>}
-        {!output && !resultsData && 'Click "Run Simulation (REST)" to start.'}
+      <div className="section-wrap section-wrap--results">
+        <div className="section-block-wrap results">
+          <div className="section-block-title-wrap">
+            <h1 className="h1-sub">Results</h1>
+            <p>Game Outcomes</p>
+          </div>
+          <div className="section-block-content-wrap results-content-wrap">
+            <div className="results-info-box">
+             {output && <div className="results-output-line">{output}</div>}
+             {!output && !resultsData && 'Click "Run Simulation" to start.'}
 
-        {resultsData && resultsData.length > 0 && (
-          <div style={{ maxHeight: '400px', overflowY: 'auto', marginTop: '1rem', width: '100%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-              <thead style={{ position: 'sticky', top: 0, backgroundColor: '#222', zIndex: 1 }}>
+             {resultsData && resultsData.length > 0 && (
+            <div className="results-scroll">
+            <table className="simulation-results-table">
+              <thead className="simulation-results-thead">
                 <tr>
                   {Object.keys(resultsData[0]).map((h, i) => (
-                    <th key={i} style={{ padding: '8px', borderBottom: '1px solid #444', color: '#1eb854' }}>{h}</th>
+                    <th key={i} className="simulation-results-th">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {resultsData.map((row, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #333' }}>
+                  <tr key={i} className="simulation-results-tr">
                     {Object.values(row).map((val, j) => (
-                      <td key={j} style={{ padding: '6px 8px', color: '#ccc' }}>{val}</td>
+                      <td key={j} className="simulation-results-td">{val}</td>
                     ))}
                   </tr>
                 ))}
@@ -571,10 +398,49 @@ const Simulation = () => {
             </table>
           </div>
         )}
+        {graphUrl && (
+          <div className="simulation-graph-wrap">
+            <img src={graphUrl} alt="Simulation Graph" className="simulation-graph-img" />
+          </div>
+        )}
       </div>
-      {graphUrl && (
-        <div style={{ marginTop: '2rem', textAlign: 'center', width: '100%' }}>
-          <img src={graphUrl} alt="Simulation Graph" style={{ maxWidth: '100%', border: '1px solid #444', borderRadius: '4px' }} />
+            <div className="results-table-wrap">
+              
+            </div>
+          </div>
+        </div>
+      </div>
+      {isBetBalanceModalOpen && (
+        <div className="simulation-modal-overlay" onClick={closeBetBalanceModal}>
+          <div className="simulation-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="simulation-modal-title">Edit Bet and Balance</h2>
+            <div className="simulation-modal-field">
+              <label className="simulation-label">Balance:</label>
+              <input
+                type="number"
+                className="simulation-input"
+                value={draftBalance}
+                onChange={(e) => setDraftBalance(e.target.value)}
+                placeholder="1000"
+                min="1"
+              />
+            </div>
+            <div className="simulation-modal-field">
+              <label className="simulation-label">Bet Amount:</label>
+              <input
+                type="number"
+                className="simulation-input"
+                value={draftBetAmount}
+                onChange={(e) => setDraftBetAmount(e.target.value)}
+                placeholder="10"
+                min="1"
+              />
+            </div>
+            <div className="simulation-modal-actions">
+              <button type="button" className="run-btn" onClick={saveBetBalance}>Save</button>
+              <button type="button" className="cancel-btn" onClick={closeBetBalanceModal}>Cancel</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

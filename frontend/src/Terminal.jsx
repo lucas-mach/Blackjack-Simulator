@@ -136,7 +136,7 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
               <Card key={i} rank={c.rank} suit={c.suit} />
             ))}
             {dealerHand.faceDown && (
-              <img src="/cards/face-down.svg" alt="face-down" style={{width:72,height:100,marginLeft:8}} />
+              <img src="/cards/face-down.svg" alt="face-down" className="face-down-card" />
             )}
         </div>
       </div>
@@ -174,16 +174,16 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
           </div>
         </div>
 
-        <div className="bet-controls" style={{marginTop:12}}>
+        <div className="bet-controls">
           {!editingBet ? (
             <>
               <button className="small-btn" onClick={startEditBet}>Edit Bet</button>
-              <button className="small-btn play" onClick={handlePlay} style={{marginLeft:8}} disabled={!connected || actions.length > 0}>Play</button>
+              <button className="small-btn play" onClick={handlePlay} disabled={!connected || actions.length > 0}>Play</button>
             </>
           ) : (
-            <span>
-              <input value={editBetValue} onChange={(e) => setEditBetValue(e.target.value)} style={{width:80}} />
-              <button className="small-btn" onClick={saveEditBet} style={{marginLeft:8}}>Save</button>
+            <span className="bet-edit-row">
+              <input className="bet-edit-input" value={editBetValue} onChange={(e) => setEditBetValue(e.target.value)} />
+              <button className="small-btn" onClick={saveEditBet}>Save</button>
             </span>
           )}
         </div>

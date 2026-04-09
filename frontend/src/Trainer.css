@@ -1,0 +1,9 @@
+.trainer-wrap {
+  padding: 2rem;
+}
+
+.trainer-header {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: var(--light02);
+}
