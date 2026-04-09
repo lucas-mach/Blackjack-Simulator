@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ResultsChart from './ResultsChart';
+import './App.css';
+import './Simulation.css';
+import './Dashboard.css';
 
 const DEFAULT_RULES = {
   blackjack_payout: '3:2',
@@ -10,36 +13,6 @@ const DEFAULT_RULES = {
   split_aces: 'no_play',
   surrender_allowed: false,
   insurance_allowed: true,
-};
-
-const selectStyle = {
-  padding: '6px 10px',
-  borderRadius: '4px',
-  border: '1px solid #444',
-  backgroundColor: '#1a1a1a',
-  color: '#ffffff',
-  fontSize: '0.9rem',
-  cursor: 'pointer',
-  maxWidth: '260px',
-  minWidth: '180px',
-};
-
-const labelStyle = {
-  color: '#aaa',
-  fontSize: '0.9rem',
-  minWidth: '220px',
-  display: 'inline-block',
-};
-
-const tinyBtn = {
-  padding: '3px 9px',
-  fontSize: '0.75rem',
-  borderRadius: '4px',
-  border: '1px solid #444',
-  background: '#222',
-  color: '#aaa',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
 };
 
 const Dashboard = () => {
@@ -117,10 +90,10 @@ const Dashboard = () => {
   };
 
   const RuleRow = ({ label, ruleKey, options }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-      <span style={labelStyle}>{label}</span>
+    <div className="dashboard-rule-row">
+      <span className="dashboard-rule-label">{label}</span>
       <select
-        style={selectStyle}
+        className="dashboard-select"
         value={String(rules[ruleKey])}
         onChange={(e) => {
           let val = e.target.value;
@@ -138,16 +111,8 @@ const Dashboard = () => {
   );
 
   const renderSimCard = (sim, index) => (
-    <div style={{
-      background: '#1a1a1a',
-      border: '1px solid #333',
-      borderRadius: '10px',
-      padding: '20px',
-      boxShadow: '0 4px 12px rgba(0,255,157,0.1)',
-      margin: '0 auto',
-      maxWidth: '900px'
-    }}>
-      <h2 style={{ color: '#00ff9d', marginBottom: '15px', textAlign: 'center' }}>
+    <div className="dashboard-session-card">
+      <h2 className="dashboard-session-title">
         Session {index + 1} {sim.date ? `- ${sim.date}` : ''}
       </h2>
 
@@ -173,22 +138,16 @@ const Dashboard = () => {
         />
       )}
 
-      <div style={{ marginTop: '20px', color: '#ddd' }}>
+      <div className="dashboard-session-stats">
         <p><strong>Hands Played:</strong> {sim.totalHands || 'N/A'}</p>
         <p><strong>Final Bankroll:</strong> {formatCurrency(sim.finalBankroll || 0)}</p>
-        <p><strong>Net Profit:</strong> <span style={{ color: (sim.netProfit || 0) >= 0 ? '#00ff9d' : '#ff4d4d' }}>
+        <p><strong>Net Profit:</strong> <span className={(sim.netProfit || 0) >= 0 ? 'dashboard-profit-positive' : 'dashboard-profit-negative'}>
           {formatCurrency(sim.netProfit || 0)}
         </span></p>
         {sim.winRate && <p><strong>Win Rate:</strong> {sim.winRate.toFixed(1)}%</p>}
       </div>
 
-      <div style={{
-        marginTop: '25px',
-        paddingTop: '15px',
-        borderTop: '1px solid #333',
-        fontSize: '0.95rem',
-        color: '#aaa'
-      }}>
+      <div className="dashboard-session-inputs">
         <strong>Original Inputs:</strong><br />
         {sim.inputs ? (
           <>
@@ -205,198 +164,169 @@ const Dashboard = () => {
   );
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
-
-      {/* ── Header ── */}
-      <div style={{ textAlign: 'center', marginBottom: '30px', padding: '20px' }}>
-        <h1 style={{ color: '#00ff9d', marginBottom: '15px' }}>
-          Blackjack Simulation Dashboard
-        </h1>
-        <button
-          onClick={clearDashboard}
-          style={{
-            background: '#ff4d4d',
-            color: 'white',
-            border: 'none',
-            padding: '8px 20px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '1rem'
-          }}
-        >
-          Clear All Simulations
-        </button>
-      </div>
-
-      {/* ── Game Rules ── */}
-      <div style={{
-        background: '#1a1a1a',
-        border: '1px solid #333',
-        borderRadius: '10px',
-        padding: '20px 24px',
-        marginBottom: '28px',
-        boxShadow: '0 4px 12px rgba(0,255,157,0.06)'
-      }}>
-        <h2 style={{ color: '#00ff9d', marginTop: 0, marginBottom: '16px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          ⚙️ Game Rules
-          <span style={{ color: '#555', fontWeight: 'normal', fontSize: '0.8rem' }}>
-            (applied to both Simulation and Interactive modes)
-          </span>
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-            <button onClick={handleDownload} title="Download rules as .bjconfig" style={tinyBtn}>
-              ⬇ Export
-            </button>
-            <button onClick={() => { setShowUpload(v => !v); setPendingRules(null); }} title="Upload a .bjconfig file" style={tinyBtn}>
-              ⬆ Import
-            </button>
-          </span>
-        </h2>
-        {showUpload && (
-          <div style={{ marginBottom: '14px' }}>
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleFileDrop}
-              style={{
-                border: `2px dashed ${dragOver ? '#00ff9d' : '#444'}`,
-                borderRadius: '6px',
-                padding: '16px',
-                textAlign: 'center',
-                color: dragOver ? '#00ff9d' : '#666',
-                fontSize: '0.85rem',
-                transition: 'all 0.15s',
-                cursor: 'pointer',
-              }}
-              onClick={() => document.getElementById('bjconfig-input').click()}
-            >
-              {pendingRules
-                ? '✅ File loaded — click Confirm to apply'
-                : 'Drop a .bjconfig file here, or click to browse'}
-              <input id="bjconfig-input" type="file" accept=".bjconfig,.json" hidden onChange={handleFileDrop} />
-            </div>
-            {pendingRules && (
-              <button onClick={handleConfirm} style={{ ...tinyBtn, marginTop: '8px', background: '#00ff9d', color: '#000', fontWeight: 'bold' }}>
-                ✔ Confirm
-              </button>
-            )}
-          </div>
-        )}
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '4px 40px' }}>
-          <RuleRow
-            label="Blackjack Payout"
-            ruleKey="blackjack_payout"
-            options={[
-              { value: '3:2', label: '3:2 (standard)' },
-              { value: '6:5', label: '6:5' },
-              { value: '1:1', label: '1:1 (even)' },
-            ]}
-          />
-          <RuleRow
-            label="Maximum Splits Allowed"
-            ruleKey="max_splits"
-            options={[
-              { value: 1, label: '1 split' },
-              { value: 2, label: '2 splits' },
-              { value: 3, label: '3 splits' },
-              { value: 4, label: '4 splits (standard)' },
-              { value: 1000, label: 'Unlimited splits' },
-            ]}
-          />
-          <RuleRow
-            label="Double Down Allowed On"
-            ruleKey="double_on"
-            options={[
-              { value: 'any', label: 'Any 2 cards (standard)' },
-              { value: '10_11', label: '10 or 11 only' },
-            ]}
-          />
-          <RuleRow
-            label="Double After Split"
-            ruleKey="double_after_split"
-            options={[
-              { value: true, label: 'Allowed (standard)' },
-              { value: false, label: 'Not allowed' },
-            ]}
-          />
-          <RuleRow
-            label="Dealer Soft 17"
-            ruleKey="dealer_hits_soft_17"
-            options={[
-              { value: false, label: 'Dealer stands (standard)' },
-              { value: true, label: 'Dealer hits' },
-            ]}
-          />
-          <RuleRow
-            label="Split Aces Rule"
-            ruleKey="split_aces"
-            options={[
-              { value: 'no_play', label: 'No play after split aces (standard)' },
-              { value: 'play_no_resplit', label: 'Play + no resplit' },
-              { value: 'same', label: 'Aces treated same as other cards' },
-            ]}
-          />
-          <RuleRow
-            label="Surrender"
-            ruleKey="surrender_allowed"
-            options={[
-              { value: false, label: 'Not allowed (standard)' },
-              { value: true, label: 'Allowed' },
-            ]}
-          />
-          <RuleRow
-            label="Insurance"
-            ruleKey="insurance_allowed"
-            options={[
-              { value: false, label: 'Not offered' },
-              { value: true, label: 'Offered when dealer shows Ace (standard)' },
-            ]}
-          />
+    <div className="app-container dashboard-root">
+      <div className="header-wrap dashboard-header-wrap">
+        <div className="header-title-wrap">
+          <h1 className="simulation-header-title">Dashboard</h1>
+          <p className="simulation-header-subtitle">Track sessions and configure game rules</p>
+        </div>
+        <div className="header-block-wrap dashboard-header-action">
+          <button type="button" className="results-btn dashboard-clear-btn" onClick={clearDashboard}>
+            Clear All Simulations
+          </button>
         </div>
       </div>
 
-      {/* ── Simulation History ── */}
-      {recentSims.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#aaa', fontSize: '1.2em' }}>
-          <p>No simulations run yet.</p>
-          <p>Head to Simulation Mode and run a session to see results here!</p>
-        </div>
-      ) : (
-        <>
-          {/* Latest simulation — full size at top */}
-          <div style={{ marginBottom: '40px' }}>
-            <h2 style={{ color: '#00ff9d', marginBottom: '15px' }}>
-              Latest Session — {recentSims[recentSims.length - 1].date}
-            </h2>
-            {renderSimCard(recentSims[recentSims.length - 1], recentSims.length - 1)}
+      <div className="section-wrap section-wrap--results">
+        <section className="section-block-wrap controls dashboard-rules-panel">
+          <div className="section-block-title-wrap dashboard-panel-head">
+            <h1 className="h1-sub dashboard-panel-title">
+              <span className="material-symbols-outlined dashboard-panel-icon" aria-hidden>settings</span>
+              Game Rules
+            </h1>
+            <p>(applied to both Simulation and Interactive modes)</p>
           </div>
-
-          {/* Older sessions as collapsible dropdowns */}
-          {recentSims.length > 1 && (
-            <div>
-              <h3 style={{ color: '#aaa', marginBottom: '15px' }}>Previous Sessions</h3>
-              {[...recentSims].slice(0, -1).reverse().map((sim, idx) => (
-                <details key={idx} style={{ marginBottom: '12px' }}>
-                  <summary style={{
-                    cursor: 'pointer',
-                    background: '#1a1a1a',
-                    padding: '12px 16px',
-                    borderRadius: '6px',
-                    color: '#00ff9d',
-                    fontWeight: 'bold',
-                    listStyle: 'none',
-                  }}>
-                    Session {recentSims.length - 1 - idx} — {sim.date}
-                  </summary>
-                  <div style={{ padding: '20px', background: '#111', borderRadius: '0 0 6px 6px' }}>
-                    {renderSimCard(sim, recentSims.length - 2 - idx)}
-                  </div>
-                </details>
-              ))}
+          <div className="dashboard-rule-actions">
+            <button onClick={handleDownload} title="Download rules as .bjconfig" className="results-btn dashboard-tiny-btn">
+              Export
+            </button>
+            <button onClick={() => { setShowUpload(v => !v); setPendingRules(null); }} title="Upload a .bjconfig file" className="results-btn dashboard-tiny-btn">
+              Import
+            </button>
+          </div>
+          {showUpload && (
+            <div className="dashboard-upload-wrap">
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleFileDrop}
+                className={`dashboard-dropzone ${dragOver ? 'is-dragover' : ''}`}
+                onClick={() => document.getElementById('bjconfig-input').click()}
+              >
+                {pendingRules
+                  ? 'File loaded - click Confirm to apply'
+                  : 'Drop a .bjconfig file here, or click to browse'}
+                <input id="bjconfig-input" type="file" accept=".bjconfig,.json" hidden onChange={handleFileDrop} />
+              </div>
+              {pendingRules && (
+                <button onClick={handleConfirm} className="run-btn dashboard-confirm-btn">
+                  Confirm
+                </button>
+              )}
             </div>
           )}
-        </>
-      )}
+          <div className="dashboard-rules-grid">
+            <RuleRow
+              label="Blackjack Payout"
+              ruleKey="blackjack_payout"
+              options={[
+                { value: '3:2', label: '3:2 (standard)' },
+                { value: '6:5', label: '6:5' },
+                { value: '1:1', label: '1:1 (even)' },
+              ]}
+            />
+            <RuleRow
+              label="Maximum Splits Allowed"
+              ruleKey="max_splits"
+              options={[
+                { value: 1, label: '1 split' },
+                { value: 2, label: '2 splits' },
+                { value: 3, label: '3 splits' },
+                { value: 4, label: '4 splits (standard)' },
+                { value: 1000, label: 'Unlimited splits' },
+              ]}
+            />
+            <RuleRow
+              label="Double Down Allowed On"
+              ruleKey="double_on"
+              options={[
+                { value: 'any', label: 'Any 2 cards (standard)' },
+                { value: '10_11', label: '10 or 11 only' },
+              ]}
+            />
+            <RuleRow
+              label="Double After Split"
+              ruleKey="double_after_split"
+              options={[
+                { value: true, label: 'Allowed (standard)' },
+                { value: false, label: 'Not allowed' },
+              ]}
+            />
+            <RuleRow
+              label="Dealer Soft 17"
+              ruleKey="dealer_hits_soft_17"
+              options={[
+                { value: false, label: 'Dealer stands (standard)' },
+                { value: true, label: 'Dealer hits' },
+              ]}
+            />
+            <RuleRow
+              label="Split Aces Rule"
+              ruleKey="split_aces"
+              options={[
+                { value: 'no_play', label: 'No play after split aces (standard)' },
+                { value: 'play_no_resplit', label: 'Play + no resplit' },
+                { value: 'same', label: 'Aces treated same as other cards' },
+              ]}
+            />
+            <RuleRow
+              label="Surrender"
+              ruleKey="surrender_allowed"
+              options={[
+                { value: false, label: 'Not allowed (standard)' },
+                { value: true, label: 'Allowed' },
+              ]}
+            />
+            <RuleRow
+              label="Insurance"
+              ruleKey="insurance_allowed"
+              options={[
+                { value: false, label: 'Not offered' },
+                { value: true, label: 'Offered when dealer shows Ace (standard)' },
+              ]}
+            />
+          </div>
+        </section>
+      </div>
+
+      <div className="section-wrap section-wrap--results">
+        <section className="section-block-wrap results dashboard-results-panel">
+          <div className="section-block-title-wrap">
+            <h1 className="h1-sub">Results</h1>
+            <p>Saved simulation outcomes</p>
+          </div>
+
+          {recentSims.length === 0 ? (
+            <div className="dashboard-empty">
+              <p>No simulations run yet.</p>
+              <p>Head to Simulation Mode and run a session to see results here.</p>
+            </div>
+          ) : (
+            <div className="dashboard-results-list">
+              <div className="dashboard-latest-wrap">
+                <h2 className="dashboard-subheading">Latest Session - {recentSims[recentSims.length - 1].date}</h2>
+                {renderSimCard(recentSims[recentSims.length - 1], recentSims.length - 1)}
+              </div>
+
+              {recentSims.length > 1 && (
+                <div className="dashboard-history-wrap">
+                  <h3 className="dashboard-history-title">Previous Sessions</h3>
+                  {[...recentSims].slice(0, -1).reverse().map((sim, idx) => (
+                    <details key={idx} className="dashboard-history-item">
+                      <summary className="dashboard-history-summary">
+                        Session {recentSims.length - 1 - idx} - {sim.date}
+                      </summary>
+                      <div className="dashboard-history-content">
+                        {renderSimCard(sim, recentSims.length - 2 - idx)}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 };
