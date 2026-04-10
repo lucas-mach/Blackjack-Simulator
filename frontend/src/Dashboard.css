@@ -28,10 +28,21 @@
 .dashboard-rules-panel,
 .dashboard-results-panel {
   width: 100%;
+  padding: 1rem;
+  padding-top: 0.2rem;
 }
 
 .dashboard-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
   width: 100%;
+}
+
+.dashboard-panel-head-text {
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .dashboard-panel-title {
@@ -46,9 +57,10 @@
 
 .dashboard-rule-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-  width: 100%;
+  flex-shrink: 0;
 }
 
 .dashboard-tiny-btn {
@@ -124,10 +136,6 @@
   width: 100%;
 }
 
-.dashboard-latest-wrap {
-  margin-bottom: 2rem;
-}
-
 .dashboard-subheading,
 .dashboard-history-title {
   color: var(--light01);
@@ -136,10 +144,10 @@
 }
 
 .dashboard-session-card {
-  background: var(--dark02);
-  border: 2px solid var(--mid);
+  background: var(--dark03);
+  border: 2px solid var(--light02);
   border-radius: 1.5rem;
-  padding: 1rem 1.2rem;
+  padding: 1rem;
 }
 
 .dashboard-session-title {
@@ -207,5 +215,12 @@
 
   .dashboard-rule-label {
     min-width: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .dashboard-rule-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

@@ -180,19 +180,21 @@ const Dashboard = () => {
       <div className="section-wrap section-wrap--results">
         <section className="section-block-wrap controls dashboard-rules-panel">
           <div className="section-block-title-wrap dashboard-panel-head">
-            <h1 className="h1-sub dashboard-panel-title">
-              <span className="material-symbols-outlined dashboard-panel-icon" aria-hidden>settings</span>
-              Game Rules
-            </h1>
-            <p>(applied to both Simulation and Interactive modes)</p>
-          </div>
-          <div className="dashboard-rule-actions">
-            <button onClick={handleDownload} title="Download rules as .bjconfig" className="results-btn dashboard-tiny-btn">
-              Export
-            </button>
-            <button onClick={() => { setShowUpload(v => !v); setPendingRules(null); }} title="Upload a .bjconfig file" className="results-btn dashboard-tiny-btn">
-              Import
-            </button>
+            <div className="dashboard-panel-head-text">
+              <h1 className="h1-sub dashboard-panel-title">
+                <span className="material-symbols-outlined dashboard-panel-icon" aria-hidden>settings</span>
+                Game Rules
+              </h1>
+              <p>(applied to both Simulation and Interactive modes)</p>
+            </div>
+            <div className="dashboard-rule-actions">
+              <button onClick={handleDownload} title="Download rules as .bjconfig" className="results-btn dashboard-tiny-btn">
+                Export
+              </button>
+              <button onClick={() => { setShowUpload(v => !v); setPendingRules(null); }} title="Upload a .bjconfig file" className="results-btn dashboard-tiny-btn">
+                Import
+              </button>
+            </div>
           </div>
           {showUpload && (
             <div className="dashboard-upload-wrap">

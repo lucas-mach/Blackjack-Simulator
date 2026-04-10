@@ -20,7 +20,6 @@ const Navbar = () => {
         <NavItem to="/dashboard" icon="dashboard" label="Dashboard" />
         <NavItem to="/simulation" icon="memory" label="Simulate" />
         <NavItem to="/trainer" icon="model_training" label="Training" />
-        <NavItem to="/graph" icon="finance_mode" label="Graph (Testing)" />
       </ul>
     </nav>
   );
