@@ -18,7 +18,6 @@ const Card = ({ rank, suit }) => {
         if (e.target.src !== window.location.origin + fallback) e.target.src = fallback;
       }}
       className="card-img"
-      style={{ width: '72px', height: '100px', marginRight: '6px' }}
     />
   );
 };

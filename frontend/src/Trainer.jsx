@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Terminal from './Terminal';
+import './Trainer.css';
 
 const Trainer = () => {
   const [handCount, setHandCount] = useState(1);
@@ -11,12 +12,11 @@ const Trainer = () => {
   };
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <div style={{ textAlign: 'center', marginBottom: '1rem', color: '#ddd' }}>
+    <div className="trainer-wrap">
+      <div className="trainer-header">
         <h2>Blackjack Trainer - Hand {handCount}</h2>
       </div>
       <Terminal autoSelect={true} onGameComplete={handleGameComplete} />
-      
     </div>
   );
 };
