@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ResultsChart from './ResultsChart';
 import './App.css';
 import './Simulation.css';
 
@@ -354,15 +355,164 @@ const Simulation = () => {
               View Results
             </button>
           </div>
-          <div className="results-link simulation-download-wrap">
-            <a
-              href="http://localhost:8000/results"     //<-------------NEW Fix: Updated localhost:8010 with correct 8000
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download Results (results.csv)
-            </a>
+        )}
+      </div>
+
+      {/* Strategy Editor ───────────────────────────────────────────── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <button onClick={() => {
+          if (!showStrategy && stratRows.length === 0) {
+            // Auto-populate all TCC levels with default (empty overrides) on first open
+            setStratRows(TCC_KEYS.map(t => ({ key: t.key, label: t.label, expanded: false, cells: { hard: {}, soft: {}, split: {} } })));
+            TCC_KEYS.forEach(t => loadStrategyCache(t.key));
+          }
+          setShowStrategy(v => !v);
+        }}
+          style={{ background: 'none', border: 'none', color: '#00ff9d', cursor: 'pointer', fontSize: '0.95rem', padding: 0 }}>
+          {showStrategy ? '▾' : '▸'} Strategy Editor
+        </button>
+        {showStrategy && (
+          <div style={{ marginTop: '10px' }}>
+            {/* Toolbar */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
+              <button onClick={restoreDefaults} style={TOOL_BTN}>Restore Defaults</button>
+              <button onClick={() => setStratRows([{ key: 'tcc_0_1', label: 'TCC 0–1 (base)', expanded: false, cells: { hard: {}, soft: {}, split: {} } }])}
+                style={TOOL_BTN}>Base Strategy Only</button>
+              <button onClick={() => setStratRows([])} style={{ ...TOOL_BTN, color: '#ff6b6b' }}>Clear All</button>
+              <button onClick={downloadStrategyConfig} style={{ ...TOOL_BTN, marginLeft: 'auto' }}>⬇ Download .bstrat</button>
+              <label style={{ ...TOOL_BTN, cursor: 'pointer' }}>⬆ Upload .bstrat
+                <input type="file" accept=".bstrat,.json" hidden onChange={uploadStrategyConfig} />
+              </label>
+            </div>
+
+            {/* Row list */}
+            {stratRows.length === 0 && (
+              <div style={{ color: '#555', fontSize: '0.85rem', padding: '8px 0' }}>
+                No overrides configured — sim uses default Excel strategies. Click “Restore Defaults” or “+ Add Row”.
+              </div>
+            )}
+            {stratRows.map((row, idx) => (
+              <div key={row.key} style={{ border: '1px solid #2a2a2a', borderRadius: '6px', marginBottom: '6px', overflow: 'hidden' }}>
+                {/* Row header */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '5px 10px', background: '#161616', gap: '8px' }}>
+                  <button onClick={() => toggleRowExpanded(idx)}
+                    style={{ background: 'none', border: 'none', color: '#00ff9d', cursor: 'pointer', fontSize: '0.85rem', padding: 0, fontWeight: 'bold' }}>
+                    {row.expanded ? '▾' : '▸'} {row.label}
+                  </button>
+                  {['hard','soft','split'].some(tab => Object.keys(row.cells[tab]||{}).length > 0) &&
+                    <span style={{ fontSize: '0.68rem', color: '#f5a623' }}>✏ edited</span>}
+                  <button onClick={() => deleteStratRow(idx)}
+                    style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.8rem' }}>
+                    ✕ Remove
+                  </button>
+                </div>
+                {/* Tables: all 3 side by side */}
+                {row.expanded && stratCache[row.key] && (() => {
+                  const d = stratCache[row.key];
+                  return (
+                    <div style={{ padding: '8px', overflowX: 'auto' }}>
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                        {['hard','soft','split'].map(tab => {
+                          const tbl = d[tab];
+                          const rLbls = d.row_labels[tab];
+                          const cLbls = d.col_labels;
+                          const cells = row.cells[tab] || {};
+                          const OPTS = tab === 'split' ? ['Y','N'] : ['H','S','D','DS','R','RS'];
+                          return (
+                            <div key={tab}>
+                              <div style={{ color: '#777', fontSize: '0.65rem', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>{tab}</div>
+                              <table style={{ borderCollapse: 'collapse', fontSize: '0.6rem' }}>
+                                <thead>
+                                  <tr>
+                                    <th style={{ padding: '1px 3px', color: '#444' }}></th>
+                                    {cLbls.map(c => <th key={c} style={{ padding: '1px 2px', color: '#666', fontWeight: 'normal', minWidth: '26px' }}>{c}</th>)}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {tbl.map((tRow, ri) => (
+                                    <tr key={ri}>
+                                      <td style={{ padding: '1px 3px', color: '#777', fontWeight: 'bold', fontSize: '0.58rem', whiteSpace: 'nowrap' }}>{rLbls[ri]}</td>
+                                      {tRow.map((cell, ci) => {
+                                        const ck = `${ri},${ci}`;
+                                        const val = cells[ck] ?? (cell ? String(cell).toUpperCase() : 'H');
+                                        return (
+                                          <td key={ci} style={{ padding: '1px', backgroundColor: ACTION_COLORS[val] || '#1a1a1a' }}>
+                                            <select value={val} onChange={e => setCellValue(idx, tab, ck, e.target.value)}
+                                              style={{ background: 'transparent', border: 'none', color: '#ddd', fontSize: '0.6rem', cursor: 'pointer', width: '26px', padding: 0 }}>
+                                              {OPTS.map(o => <option key={o} value={o} style={{ background: '#1a1a1a' }}>{o}</option>)}
+                                            </select>
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+                {row.expanded && !stratCache[row.key] && (
+                  <div style={{ padding: '8px', color: '#555', fontSize: '0.8rem' }}>Loading strategy data…</div>
+                )}
+              </div>
+            ))}
+
+            {/* Add Row */}
+            <div style={{ marginTop: '8px' }}>
+              {!showAddRow ? (
+                <button onClick={() => setShowAddRow(true)}
+                  style={{ background: 'none', border: '1px dashed #333', color: '#555', cursor: 'pointer', fontSize: '0.82rem', padding: '4px 12px', borderRadius: '4px' }}>
+                  + Add Strategy Row
+                </button>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', padding: '8px 10px', background: '#161616', borderRadius: '6px', border: '1px solid #2a2a2a' }}>
+                  <label style={{ color: '#888', fontSize: '0.78rem' }}>Level:</label>
+                  <select value={addRowKey} onChange={e => setAddRowKey(e.target.value)}
+                    style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff', fontSize: '0.78rem' }}>
+                    {TCC_KEYS.filter(t => !stratRows.find(r => r.key === t.key)).map(t => (
+                      <option key={t.key} value={t.key}>{t.label}</option>
+                    ))}
+                  </select>
+                  <label style={{ color: '#888', fontSize: '0.78rem' }}>Copy from:</label>
+                  <select value={addRowFrom} onChange={e => setAddRowFrom(e.target.value)}
+                    style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff', fontSize: '0.78rem' }}>
+                    {TCC_KEYS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                  </select>
+                  <button onClick={addStratRow}
+                    style={{ padding: '3px 10px', borderRadius: '4px', background: '#00ff9d', color: '#000', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 'bold' }}>Add</button>
+                  <button onClick={() => setShowAddRow(false)}
+                    style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.78rem' }}>Cancel</button>
+                </div>
+              )}
+            </div>
+            {stratLoading && <div style={{ color: '#777', fontSize: '0.78rem', marginTop: '4px' }}>Loading strategy data…</div>}
           </div>
+        )}
+      </div>
+      {/* ── end advanced controls ──────────────────────────────────────────── */}
+
+      <div className="controls">
+        <button className="run-btn" onClick={runRestSimulation}>
+          Run Simulation (REST)
+        </button>
+        <button className="run-btn" onClick={fetchResults}>
+          View Results (on webpage)
+        </button>
+        <button className="run-btn" onClick={() => setShowGraph(v => !v)}>
+          {showGraph ? 'Hide Graph' : 'View Graph'}
+        </button>
+        <div className="results-link" style={{ marginTop: '2rem', textAlign: 'center' }}>
+          <a
+            href="http://localhost:8000/results"     //<-------------NEW Fix: Updated localhost:8010 with correct 8000
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Download Results (results.csv)
+          </a>
         </div>
       </div>
       <div className="section-wrap section-wrap--results">
