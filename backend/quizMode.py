@@ -1,0 +1,130 @@
+from console import ConsoleGame
+from bj import PlayerHand, Deck, Card
+from auto import AutoGame
+import uuid
+
+# interprets the actions returned from strategy
+ACTION_MAP = {
+    "h": "hit",
+    "s": "stand",
+    "d": "double",
+    "v": "split"
+}
+
+# this is what the API will call
+# returns scenario question aligning with what the frontend expects
+def generate_quiz_question():
+    scenario = generate_quiz_scenario()
+    return {
+        # creates a id for each scenario
+        "scenarioId": str(uuid.uuid4()),
+        "playerHand": scenario["player_hand"],
+        "playerTotal": scenario["player_total"],
+        "dealerUpcard": scenario["dealer_upcard"],
+        "allowedActions": scenario["allowed_actions"],
+        "runningCount": 0,
+        "trueCount": 0,
+        "strategy": "Basic Strategy",
+        "rules": {
+            "dealerHitsSoft17": False,
+            "doubleAfterSplit": True
+        },
+        "correctAction": get_correct_action(scenario)
+    }
+
+
+
+# stops console at action prompt so we only get one scenario
+def generate_quiz_scenario():
+    while True:
+        # stores the scenario data
+        captured = {}
+
+     # user input is not needed here 
+        def fake_input():
+            return None  
+
+
+        def capture_output(event):
+            # lets us update captured
+            nonlocal captured
+
+             # player hand
+            if isinstance(event, dict) and event.get('type') == 'hand' and event.get('owner') == 'player':
+                captured['player_hand'] = event['cards']
+                captured['player_total'] = event['value']
+
+            # dealer upcard
+            if isinstance(event, dict) and event.get('type') == 'card_shown':
+                if event.get('card'):
+                    captured['dealer_upcard'] = event['card']['rank']
+
+            # when we see the actions we stop the iteration
+            if isinstance(event, dict) and event.get('type') == 'actions':
+                captured['allowed_actions'] = [
+                    'double' if a['label'].lower() == 'double down' else a['label'].lower()
+                    for a in event['actions']
+                ]
+
+                # stop the game after capturing the allowed actions, since that's the main output we need for the quiz
+                raise StopIteration 
+
+        deck = Deck(num_decks=8)
+        # gives a a new hand every time, so we can capture different scenarios
+        deck.shuffle()
+        game = deck.new_game()
+
+        # runs the game with our fake input and capture output functions
+        try:
+            ConsoleGame.played_hand(
+                game=game,
+                bet_amount=10,
+                balance=1000,
+                input_func=fake_input,
+                output_func=capture_output
+            )
+        except StopIteration:
+            # unecessary rn but to be updated to reflect actual running count and true count in the quiz
+            captured["running_count"] = 0
+            captured["true_count"] = 0
+            return captured
+
+        
+# converts our card list into what the strategy function expects
+def build_player_hand(player_hand_data):
+    hand = PlayerHand()
+    suit_map = {
+        "Hearts": "♡",
+        "Diamonds": "♢",
+        "Clubs": "♧",
+        "Spades": "♤"
+    }
+
+    for card in player_hand_data:
+        rank = card["rank"]
+        suit = suit_map[card["suit"]]
+        hand.draw_card(Card(rank, suit))
+
+    return hand
+
+# this does the same as above but for the dealer upcard, since the strategy function just needs the rank value of the upcard
+def get_dealer_value(rank):
+    if rank in ["J", "Q", "K"]:
+        return 10
+    if rank == "A":
+        return 11
+    return int(rank)
+
+# calculates the action for the generated scenario
+def get_correct_action(scenario):
+    player_hand = build_player_hand(scenario["player_hand"])
+    dealer_value = get_dealer_value(scenario["dealer_upcard"])
+
+    # for now assume true count to be 0; meaning basic strategy
+    strategy_path = AutoGame.determine_strategy(0)
+    strategy = AutoGame.Strategy(strategy_path)
+
+    action_code = strategy.get_action(player_hand, dealer_value)
+    
+    # translates the action code from the strategy function into the actual action label we want to return to the frontend
+    return ACTION_MAP[action_code]      

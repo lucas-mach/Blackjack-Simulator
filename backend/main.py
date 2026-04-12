@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from console import ConsoleGame
 from auto import AutoGame
+from quizMode import generate_quiz_question
 import threading
 import queue
 import asyncio
@@ -175,7 +176,13 @@ def get_graph():
         }
     )
 
-
+# quiz mode endpoint: generates question for the frontend!
+@app.get("/quiz-mode/question")
+def get_quiz_mode_question():
+    scenario = generate_quiz_question()
+    # remove the correct action from the response
+    scenario.pop("correct_action", None)
+    return scenario
 
 
 
