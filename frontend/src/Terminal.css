@@ -1,279 +1,211 @@
-.terminal-container {
-  background-color: var(--dark02);
-  color: var(--accent02);
-  font-family: 'Courier New', Courier, monospace;
-  padding: 28px;
-  border-radius: 10px;
-  position: fixed;
-  right: 60px;
-  left: auto;
-  top: 100px;
-  width: min(760px, 92vw);
-  max-height: calc(100vh - 140px);
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
-  border: 1px solid var(--mid);
+.trainer-terminal {
+  width: 100%;
+  text-align: left;
+  color: var(--light01);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.trainer-connection-hint {
+  color: var(--light02);
+  font-size: var(--font-size-label);
+  margin: 0 0 0.75rem 0;
   text-align: left;
 }
 
-@media (max-width: 1100px) {
-  .terminal-container {
-    left: 50%;
-    transform: translateX(-50%);
-    right: auto;
-    width: 94vw;
-    top: 80px;
-    max-height: calc(100vh - 120px);
-  }
+.trainer-hand-panel {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: flex-start;
+  align-items: stretch;
 }
 
-.terminal-output {
-  flex-grow: 1;
-  overflow-y: auto;
-  margin-bottom: 10px;
-  padding-right: 10px;
-}
-
-.terminal-line {
-  margin-bottom: 4px;
-  white-space: pre-wrap;
-  line-height: 1.4;
-}
-
-.terminal-input-form {
+.trainer-hand-footer {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  border-top: 1px solid var(--mid);
-  padding-top: 10px;
-}
-
-.terminal-prompt {
-  margin-right: 10px;
-  font-weight: bold;
-}
-
-.terminal-input {
-  background: transparent;
-  border: none;
-  color: var(--accent02);
-  font-family: inherit;
-  font-size: inherit;
-  flex-grow: 1;
-  outline: none;
-}
-
-.terminal-output::-webkit-scrollbar {
-  width: 8px;
-}
-
-.terminal-output::-webkit-scrollbar-track {
-  background: var(--dark01);
-}
-
-.terminal-output::-webkit-scrollbar-thumb {
-  background: var(--mid);
-  border-radius: 4px;
-}
-
-.terminal-output::-webkit-scrollbar-thumb:hover {
-  background: var(--light02);
-}
-
-.actions-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.action-btn {
-  background: var(--dark02);
-  color: var(--light01);
-  border: 1px solid var(--mid);
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.action-btn:hover {
-  background: var(--mid);
-}
-
-.prompt-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.prompt-row input {
-  padding: 6px;
-  border-radius: 4px;
-  border: 1px solid var(--mid);
-  background: var(--dark01);
-  color: var(--light01);
-}
-
-.prompt-row button {
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid var(--mid);
-  background: var(--dark02);
-  color: var(--light01);
-}
-
-.top-bar {
-  display: flex;
   justify-content: space-between;
-  padding: 12px 16px;
-  color: var(--light01);
+  width: 100%;
+  gap: 1rem;
 }
 
-.bet-display,
-.balance-display {
-  font-weight: 700;
-  font-size: 16px;
+.trainer-hand-footer .trainer-hand-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
 }
 
-.dealer-area {
+.trainer-hand-heading .h1-sub {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  margin: 0 0 0.25rem 0;
+}
+
+.trainer-hand-heading p {
+  margin: 0;
+}
+
+.trainer-hand-cards-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  padding: 12px;
+  flex-wrap: nowrap;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-color: var(--mid) transparent;
 }
 
-.dealer-cards {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+.trainer-hand-cards-row::-webkit-scrollbar {
+  height: 8px;
+}
+
+.trainer-hand-cards-row::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.trainer-hand-cards-row::-webkit-scrollbar-thumb {
+  background-color: var(--mid);
+  border-radius: 999px;
+}
+
+.trainer-hand-cards-row .card-img {
+  width: 12.5rem;
+  height: 17.3rem;
+  flex-shrink: 0;
+  margin-right: -7.5rem;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 0;
+}
+
+.trainer-hand-cards-row .card-img:last-child {
+  margin-right: 0;
+  z-index: 1;
+}
+
+.trainer-hand-cards-row .face-down-card {
+  flex-shrink: 0;
+  margin-right: 0;
+  z-index: 2;
 }
 
 .face-down-card {
-  width: 72px;
-  height: 100px;
-  margin-left: 8px;
+  width: 12.5rem;
+  height: 17.3rem;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.bet-controls {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.trainer-panel-corner-placeholder {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--mid);
+  background: transparent;
+  pointer-events: none;
+  opacity: 0.85;
+  box-sizing: border-box;
 }
 
-.small-btn {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--mid);
-  background: var(--dark02);
-  color: var(--light01);
-  cursor: pointer;
-}
-
-.small-btn:hover {
-  background: var(--mid);
-}
-
-.small-btn.play {
-  margin-left: 8px;
-}
-
-.small-btn + .small-btn {
-  margin-left: 8px;
-}
-
-.bet-edit-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.bet-edit-row .small-btn {
-  margin-left: 0;
-}
-
-.bet-edit-input {
-  width: 80px;
-  padding: 6px;
-  border-radius: 4px;
-  border: 1px solid var(--mid);
-  background: var(--dark01);
-  color: var(--light01);
-}
-
-.dealer-value,
-.player-value {
-  color: var(--light01);
-  margin-bottom: 8px;
-  font-weight: 700;
-}
-
-.dealer-label {
-  color: var(--light02);
-  margin-bottom: 8px;
-}
-
-.table-center {
-  height: 80px;
-  display: flex;
+.trainer-outcome-icon {
+  font-size: 2rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--light02);
+  line-height: 1;
+  user-select: none;
 }
 
-.player-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 18px;
+.trainer-outcome-icon--crown {
+  color: var(--accent01);
 }
 
-.hand-cards {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.controls {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0 16px;
-}
-
-.control-left,
-.control-right {
-  display: flex;
-  gap: 12px;
-}
-
-.control-btn {
-  width: 140px;
-  height: 54px;
-  border-radius: 28px;
-  border: none;
-  color: var(--light01);
+.trainer-outcome-icon--lose {
+  color: #e53935;
   font-weight: 700;
+}
+
+.trainer-options-bar {
+  width: 100%;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+}
+
+.trainer-options-bar .section-block-title-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.trainer-options-actions {
+  flex: 0 1 auto;
+  justify-content: flex-end !important;
+  flex-wrap: wrap;
+  gap: 0.75rem !important;
+}
+
+.trainer-action-btn {
+  min-width: 6.5rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 2rem;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
+  font-family: inherit;
+  border: 2px solid transparent;
 }
 
-.control-btn.stand {
-  background: var(--mid);
+.trainer-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
-.control-btn.hit {
-  background: var(--accent02);
+.trainer-action-btn--stand {
+  background-color: var(--dark02);
+  color: var(--light01);
+  border-color: var(--light01);
 }
 
-.control-btn.double {
-  background: var(--accent01);
+.trainer-action-btn--stand:hover:not(:disabled) {
+  background-color: var(--dark03);
+}
+
+.trainer-action-btn--double {
+  background-color: var(--accent01);
   color: var(--dark01);
+  border-color: var(--accent01);
 }
 
-.control-btn.split {
-  background: var(--light02);
+.trainer-action-btn--double:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.trainer-action-btn--hit {
+  background-color: var(--accent02);
   color: var(--dark01);
+  border-color: var(--accent02);
+}
+
+.trainer-action-btn--hit:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.trainer-action-btn--split {
+  background-color: var(--dark03);
+  color: var(--light01);
+  border-color: var(--mid);
+}
+
+.trainer-play-btn {
+  min-width: 7rem;
 }
 
 .result-banner {
@@ -309,13 +241,4 @@
 .result-banner.split {
   background: var(--accent01);
   color: var(--dark01);
-}
-
-.result-banner .title {
-  font-size: 28px;
-}
-
-.result-banner .subtitle {
-  font-size: 18px;
-  opacity: 0.95;
 }

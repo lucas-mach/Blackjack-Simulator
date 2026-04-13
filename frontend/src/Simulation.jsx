@@ -27,13 +27,6 @@ const ACTION_COLORS = {
   Y:  '#1a3a1a',
 };
 
-const TOOL_BTN = {
-  padding: '3px 10px', fontSize: '0.78rem', borderRadius: '4px',
-  border: '1px solid #444', background: '#222', color: '#aaa',
-  cursor: 'pointer', whiteSpace: 'nowrap',
-};
-
-
 const Simulation = () => {
   const [output, setOutput] = useState('');
   const [numGames, setNumGames] = useState('');
@@ -66,7 +59,7 @@ const Simulation = () => {
       const res = await fetch(`http://localhost:8000/strategy/${tcc_key}`);
       if (res.ok) {
         const data = await res.json();
-        setStratCache(prev => ({ ...prev, [tcc_key]: data }));
+        setStratCache((prev) => ({ ...prev, [tcc_key]: data }));
         setStratLoading(false);
         return data;
       }
@@ -103,9 +96,35 @@ const Simulation = () => {
     }));
   };
 
-  const restoreDefaults = () => {
-    setStratRows(TCC_KEYS.map(t => ({ key: t.key, label: t.label, expanded: false, cells: { hard: {}, soft: {}, split: {} } })));
-    TCC_KEYS.forEach(t => loadStrategyCache(t.key));
+  const restoreDefaults = async () => {
+    const rows = TCC_KEYS.map((t) => ({
+      key: t.key,
+      label: t.label,
+      expanded: false,
+      cells: { hard: {}, soft: {}, split: {} },
+    }));
+    setStratRows(rows);
+    setStratLoading(true);
+    try {
+      const pairs = await Promise.all(
+        TCC_KEYS.map(async (t) => {
+          try {
+            const res = await fetch(`http://localhost:8000/strategy/${t.key}`);
+            if (!res.ok) return null;
+            return [t.key, await res.json()];
+          } catch {
+            return null;
+          }
+        })
+      );
+      const next = {};
+      pairs.forEach((p) => {
+        if (p) next[p[0]] = p[1];
+      });
+      setStratCache(next);
+    } finally {
+      setStratLoading(false);
+    }
   };
 
   const downloadStrategyConfig = () => {
@@ -244,14 +263,12 @@ const Simulation = () => {
   };
 
   const saveBetBalance = () => {
-    if (draftBalance !== '') {
-      setBalance(draftBalance);
-    }
-    if (draftBetAmount !== '') {
-      setBetAmount(draftBetAmount);
-    }
+    if (draftBalance !== '') setBalance(Number(draftBalance));
+    if (draftBetAmount !== '') setBetAmount(Number(draftBetAmount));
     setIsBetBalanceModalOpen(false);
   };
+
+  const closeStrategyModal = () => setShowStrategy(false);
 
   const fetchResults = async () => {
     try {
@@ -338,14 +355,14 @@ const Simulation = () => {
         <div className="section-block-wrap controls">
           <div className="section-block-title-wrap">
             <h1 className="h1-sub">Control</h1>
-            <p>Start and Edit Simulation</p>
+            <p>Start Simulation</p>
           </div>
           <div className="section-block-content-wrap">
             <button className="run-btn" onClick={runRestSimulation}>
               Run Simulation
             </button>
-            <button className="results-btn" onClick={openBetBalanceModal}>
-              Edit Balance/Bet
+            <button type="button" className="results-btn" onClick={() => setShowStrategy(true)}>
+              Edit Strategy
             </button>
             <button className="graph-btn" onClick={() => setGraphUrl(`http://localhost:8000/graph?t=${new Date().getTime()}`)}>
               View Graph
@@ -410,6 +427,321 @@ const Simulation = () => {
           </div>
         </div>
       </div>
+
+      {showStrategy && (
+        <div className="simulation-modal-overlay" onClick={closeStrategyModal}>
+          <div
+            className="simulation-modal simulation-modal--strategy"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="strategy-editor-title"
+          >
+            <div className="simulation-strategy-modal-head">
+              <h2 id="strategy-editor-title" className="simulation-modal-title">
+                Strategy Editor
+              </h2>
+              <button
+                type="button"
+                className="simulation-strategy-modal-close"
+                onClick={closeStrategyModal}
+                aria-label="Close strategy editor"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '1.5rem' }}>
+                  close
+                </span>
+              </button>
+            </div>
+
+            <div className="simulation-strategy-toolbar">
+              <button type="button" className="simulation-strategy-toolbar-btn" onClick={restoreDefaults}>
+                Restore Defaults
+              </button>
+              <button
+                type="button"
+                className="simulation-strategy-toolbar-btn"
+                onClick={() =>
+                  setStratRows([
+                    {
+                      key: 'tcc_0_1',
+                      label: 'TCC 0–1 (base)',
+                      expanded: false,
+                      cells: { hard: {}, soft: {}, split: {} },
+                    },
+                  ])
+                }
+              >
+                Base Strategy Only
+              </button>
+              <button
+                type="button"
+                className="simulation-strategy-toolbar-btn simulation-strategy-toolbar-btn--danger"
+                onClick={() => setStratRows([])}
+              >
+                Clear All
+              </button>
+              <div className="simulation-strategy-toolbar-spacer" aria-hidden="true" />
+              <button type="button" className="simulation-strategy-toolbar-btn" onClick={downloadStrategyConfig}>
+                ⬇ Download .bstrat
+              </button>
+              <label className="simulation-strategy-upload-label">
+                ⬆ Upload .bstrat
+                <input type="file" accept=".bstrat,.json" hidden onChange={uploadStrategyConfig} />
+              </label>
+            </div>
+
+            {stratRows.length === 0 && (
+              <div style={{ color: '#555', fontSize: '0.85rem', padding: '8px 0' }}>
+                No overrides configured — sim uses default Excel strategies. Click &quot;Restore Defaults&quot; or
+                &quot;+ Add Strategy Row&quot;.
+              </div>
+            )}
+            {stratRows.map((row, idx) => (
+              <div
+                key={row.key}
+                className="simulation-strategy-tcc-row"
+                style={{
+                  border: '1px solid #2a2a2a',
+                  borderRadius: '6px',
+                  marginBottom: '6px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div className="simulation-strategy-tcc-head">
+                  <button
+                    type="button"
+                    className="simulation-strategy-tcc-toggle"
+                    onClick={() => toggleRowExpanded(idx)}
+                  >
+                    {row.expanded ? '▾' : '▸'} {row.label}
+                  </button>
+                  {['hard', 'soft', 'split'].some((tab) => Object.keys(row.cells[tab] || {}).length > 0) && (
+                    <span style={{ fontSize: '0.68rem', color: '#f5a623' }}>✏ edited</span>
+                  )}
+                  <button
+                    type="button"
+                    className="simulation-strategy-row-remove"
+                    onClick={() => deleteStratRow(idx)}
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+                {row.expanded &&
+                  stratCache[row.key] &&
+                  (() => {
+                    const d = stratCache[row.key];
+                    return (
+                      <div style={{ padding: '8px', overflowX: 'auto' }}>
+                        <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                          {['hard', 'soft', 'split'].map((tab) => {
+                            const tbl = d[tab];
+                            const rLbls = d.row_labels[tab];
+                            const cLbls = d.col_labels;
+                            const cells = row.cells[tab] || {};
+                            const OPTS = tab === 'split' ? ['Y', 'N'] : ['H', 'S', 'D', 'DS', 'R', 'RS'];
+                            return (
+                              <div key={tab}>
+                                <div
+                                  style={{
+                                    color: '#777',
+                                    fontSize: '0.65rem',
+                                    textAlign: 'center',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.06em',
+                                    marginBottom: '2px',
+                                  }}
+                                >
+                                  {tab}
+                                </div>
+                                <table style={{ borderCollapse: 'collapse', fontSize: '0.6rem' }}>
+                                  <thead>
+                                    <tr>
+                                      <th style={{ padding: '1px 3px', color: '#444' }} />
+                                      {cLbls.map((c) => (
+                                        <th
+                                          key={c}
+                                          style={{
+                                            padding: '1px 2px',
+                                            color: '#666',
+                                            fontWeight: 'normal',
+                                            minWidth: '26px',
+                                          }}
+                                        >
+                                          {c}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {tbl.map((tRow, ri) => (
+                                      <tr key={ri}>
+                                        <td
+                                          style={{
+                                            padding: '1px 3px',
+                                            color: '#777',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.58rem',
+                                            whiteSpace: 'nowrap',
+                                          }}
+                                        >
+                                          {rLbls[ri]}
+                                        </td>
+                                        {tRow.map((cell, ci) => {
+                                          const ck = `${ri},${ci}`;
+                                          const val = cells[ck] ?? (cell ? String(cell).toUpperCase() : 'H');
+                                          return (
+                                            <td
+                                              key={ci}
+                                              style={{
+                                                padding: '1px',
+                                                backgroundColor: ACTION_COLORS[val] || '#1a1a1a',
+                                              }}
+                                            >
+                                              <select
+                                                value={val}
+                                                onChange={(e) => setCellValue(idx, tab, ck, e.target.value)}
+                                                style={{
+                                                  background: 'transparent',
+                                                  border: 'none',
+                                                  color: '#ddd',
+                                                  fontSize: '0.6rem',
+                                                  cursor: 'pointer',
+                                                  width: '26px',
+                                                  padding: 0,
+                                                }}
+                                              >
+                                                {OPTS.map((o) => (
+                                                  <option key={o} value={o} style={{ background: '#1a1a1a' }}>
+                                                    {o}
+                                                  </option>
+                                                ))}
+                                              </select>
+                                            </td>
+                                          );
+                                        })}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                {row.expanded && !stratCache[row.key] && (
+                  <div style={{ padding: '8px', color: '#555', fontSize: '0.8rem' }}>Loading strategy data…</div>
+                )}
+              </div>
+            ))}
+
+            <div style={{ marginTop: '8px' }}>
+              {!showAddRow ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAddRow(true)}
+                  style={{
+                    background: 'none',
+                    border: '1px dashed #333',
+                    color: '#555',
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    padding: '4px 12px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  + Add Strategy Row
+                </button>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    padding: '8px 10px',
+                    background: '#161616',
+                    borderRadius: '6px',
+                    border: '1px solid #2a2a2a',
+                  }}
+                >
+                  <label style={{ color: '#888', fontSize: '0.78rem' }}>Level:</label>
+                  <select
+                    value={addRowKey}
+                    onChange={(e) => setAddRowKey(e.target.value)}
+                    style={{
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      background: '#222',
+                      color: '#fff',
+                      fontSize: '0.78rem',
+                    }}
+                  >
+                    {TCC_KEYS.filter((t) => !stratRows.find((r) => r.key === t.key)).map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                  <label style={{ color: '#888', fontSize: '0.78rem' }}>Copy from:</label>
+                  <select
+                    value={addRowFrom}
+                    onChange={(e) => setAddRowFrom(e.target.value)}
+                    style={{
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      border: '1px solid #444',
+                      background: '#222',
+                      color: '#fff',
+                      fontSize: '0.78rem',
+                    }}
+                  >
+                    {TCC_KEYS.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={addStratRow}
+                    style={{
+                      padding: '3px 10px',
+                      borderRadius: '4px',
+                      background: '#00ff9d',
+                      color: '#000',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddRow(false)}
+                    style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.78rem' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            {stratLoading && (
+              <div style={{ color: '#777', fontSize: '0.78rem', marginTop: '4px' }}>Loading strategy data…</div>
+            )}
+
+            <div className="simulation-modal-actions">
+              <button type="button" className="run-btn" onClick={closeStrategyModal}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isBetBalanceModalOpen && (
         <div className="simulation-modal-overlay" onClick={closeBetBalanceModal}>
           <div className="simulation-modal" onClick={(e) => e.stopPropagation()}>
@@ -421,7 +753,7 @@ const Simulation = () => {
                 className="simulation-input"
                 value={draftBalance}
                 onChange={(e) => setDraftBalance(e.target.value)}
-                placeholder="1000"
+                placeholder={String(balance)}
                 min="1"
               />
             </div>
@@ -432,13 +764,17 @@ const Simulation = () => {
                 className="simulation-input"
                 value={draftBetAmount}
                 onChange={(e) => setDraftBetAmount(e.target.value)}
-                placeholder="10"
+                placeholder={String(betAmount)}
                 min="1"
               />
             </div>
             <div className="simulation-modal-actions">
-              <button type="button" className="run-btn" onClick={saveBetBalance}>Save</button>
-              <button type="button" className="cancel-btn" onClick={closeBetBalanceModal}>Cancel</button>
+              <button type="button" className="run-btn" onClick={saveBetBalance}>
+                Save
+              </button>
+              <button type="button" className="cancel-btn" onClick={closeBetBalanceModal}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>

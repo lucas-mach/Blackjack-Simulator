@@ -2,18 +2,59 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Terminal.css';
 import Card from './Card';
 
-const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
+const ACTION_ORDER = ['s', 'd', 'h', 'v'];
+
+function outcomeBadgeForSide(side, lastResult) {
+  if (!lastResult) return 'neutral';
+  const { outcome, profit } = lastResult;
+  const p = Number(profit);
+  if (outcome === 'push') return 'neutral';
+  if (outcome === 'win') return side === 'player' ? 'crown' : 'x';
+  if (outcome === 'loss') return side === 'dealer' ? 'crown' : 'x';
+  if (outcome === 'split') {
+    if (p > 0) return side === 'player' ? 'crown' : 'x';
+    if (p < 0) return side === 'dealer' ? 'crown' : 'x';
+    return 'neutral';
+  }
+  return 'neutral';
+}
+
+function HandOutcomeBadge({ side, lastResult }) {
+  const kind = outcomeBadgeForSide(side, lastResult);
+  if (kind === 'crown') {
+    return (
+      <span
+        className="material-symbols-outlined trainer-outcome-icon trainer-outcome-icon--crown"
+        aria-label={`${side === 'player' ? 'Player' : 'Dealer'} won`}
+      >
+        crown
+      </span>
+    );
+  }
+  if (kind === 'x') {
+    return (
+      <span
+        className="material-symbols-outlined trainer-outcome-icon trainer-outcome-icon--lose"
+        aria-label={`${side === 'player' ? 'Player' : 'Dealer'} lost`}
+      >
+        close
+      </span>
+    );
+  }
+  return <div className="trainer-panel-corner-placeholder" aria-hidden="true" />;
+}
+
+const Terminal = ({ autoSelect = true, handCount = 1, onGameComplete = () => {} }) => {
   const [connected, setConnected] = useState(false);
-  const [playerHand, setPlayerHand] = useState({cards: [], value: 0});
-  const [dealerHand, setDealerHand] = useState({cards: [], value: 0});
+  const [playerHand, setPlayerHand] = useState({ cards: [], value: 0 });
+  const [dealerHand, setDealerHand] = useState({ cards: [], value: 0 });
   const [actions, setActions] = useState([]);
-  const [prompt, setPrompt] = useState(null);
-  const [promptInput, setPromptInput] = useState('');
   const [lastResult, setLastResult] = useState(null);
   const [balance, setBalance] = useState(1000);
   const [bet, setBet] = useState(10);
-  const [editingBet, setEditingBet] = useState(false);
-  const [editBetValue, setEditBetValue] = useState(bet);
+  const [isBetBalanceModalOpen, setIsBetBalanceModalOpen] = useState(false);
+  const [draftBalance, setDraftBalance] = useState('');
+  const [draftBetAmount, setDraftBetAmount] = useState('');
 
   const ws = useRef(null);
 
@@ -22,7 +63,6 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
 
     ws.current.onopen = () => {
       setConnected(true);
-      // Auto-select console mode for interactive simulation if autoSelect is enabled
       if (autoSelect) {
         try {
           ws.current.send('1');
@@ -35,34 +75,31 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
         const msg = JSON.parse(event.data);
         switch (msg.type) {
           case 'text':
-            // keep text messages off the main UI; ignore or could show a small toast
-            break;
-          case 'prompt':
-            setPrompt(msg.text);
-            setPromptInput('');
             break;
           case 'actions':
             setActions(msg.actions || []);
             break;
           case 'hand':
-            if (msg.owner === 'player') setPlayerHand({cards: msg.cards || [], value: msg.value || 0, faceDown: false});
-            else setDealerHand({cards: msg.cards || [], value: msg.value || 0, faceDown: false});
+            if (msg.owner === 'player')
+              setPlayerHand({ cards: msg.cards || [], value: msg.value || 0, faceDown: false });
+            else setDealerHand({ cards: msg.cards || [], value: msg.value || 0, faceDown: false });
             break;
           case 'card_shown':
-            if (msg.card) setDealerHand({cards: [msg.card], value: msg.card && msg.card.value ? msg.card.value : 0, faceDown: msg.faceDown || false});
-            else setDealerHand({cards: [], value: 0, faceDown: false});
+            if (msg.card)
+              setDealerHand({
+                cards: [msg.card],
+                value: msg.card && msg.card.value ? msg.card.value : 0,
+                faceDown: msg.faceDown || false,
+              });
+            else setDealerHand({ cards: [], value: 0, faceDown: false });
             break;
           case 'state':
-            // optional structured state (balance/bet)
             if (msg.balance !== undefined) setBalance(msg.balance);
             if (msg.bet !== undefined) setBet(msg.bet);
             break;
           case 'result':
-            // {type:'result', outcome:'win'|'loss'|'push'|'split', profit: N}
             setLastResult(msg);
-            // Trigger game complete callback after short delay so result banner displays
             setTimeout(() => onGameComplete(), 4500);
-            // auto-clear after 4 seconds
             try {
               setTimeout(() => setLastResult(null), 4000);
             } catch (e) {}
@@ -70,9 +107,7 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
           default:
             break;
         }
-      } catch (e) {
-        // plain text fallback ignored
-      }
+      } catch (e) {}
     };
 
     ws.current.onclose = () => {
@@ -96,99 +131,183 @@ const Terminal = ({ autoSelect = true, onGameComplete = () => {} }) => {
     try {
       ws.current.send(String(bet));
     } catch (e) {}
-    // clear any prompt/UI state related to betting
-    setPrompt(null);
+    setLastResult(null);
   };
 
-  const startEditBet = () => {
-    setEditBetValue(bet);
-    setEditingBet(true);
+  const openBetBalanceModal = () => {
+    setDraftBalance('');
+    setDraftBetAmount('');
+    setIsBetBalanceModalOpen(true);
   };
 
-  const saveEditBet = () => {
-    const v = parseInt(editBetValue, 10);
-    if (!isNaN(v) && v >= 0) {
-      setBet(v);
-    }
-    setEditingBet(false);
+  const closeBetBalanceModal = () => {
+    setIsBetBalanceModalOpen(false);
   };
 
-  const submitPrompt = () => {
-    if (ws.current && connected) {
-      ws.current.send(promptInput);
-    }
-    setPrompt(null);
-    setPromptInput('');
+  const saveBetBalance = () => {
+    if (draftBalance !== '') setBalance(Number(draftBalance));
+    if (draftBetAmount !== '') setBet(Number(draftBetAmount));
+    setIsBetBalanceModalOpen(false);
+  };
+
+  const orderedActions = ACTION_ORDER.map((code) => actions.find((a) => a.code === code)).filter(
+    Boolean
+  );
+
+  const actionLabel = (code) => {
+    if (code === 's') return 'Stand';
+    if (code === 'd') return 'Double';
+    if (code === 'h') return 'Hit';
+    if (code === 'v') return 'Split';
+    return code;
+  };
+
+  const actionClass = (code) => {
+    if (code === 's') return 'trainer-action-btn trainer-action-btn--stand';
+    if (code === 'd') return 'trainer-action-btn trainer-action-btn--double';
+    if (code === 'h') return 'trainer-action-btn trainer-action-btn--hit';
+    return 'trainer-action-btn trainer-action-btn--split';
   };
 
   return (
-    <div className="terminal-container">
-      <div className="top-bar">
-        <div className="bet-display">BET: <span className="amount">€{bet}</span></div>
-        <div className="balance-display">BALANCE: <span className="amount">€{balance}</span></div>
+    <div className="trainer-terminal">
+      <div className="header-wrap">
+        <div className="header-title-wrap">
+          <h1 className="simulation-header-title">Training</h1>
+          <p className="simulation-header-subtitle">
+            Interactive Mode{handCount != null ? ` · Hand ${handCount}` : ''}
+          </p>
+        </div>
+        <div className="header-block-wrap">
+          <button
+            type="button"
+            className="bet-edit-btn"
+            onClick={openBetBalanceModal}
+            aria-label="Edit bet and balance"
+          >
+            <span className="material-symbols-outlined bet-edit-icon">edit_square</span>
+          </button>
+        </div>
+        <div className="header-block-wrap">
+          <p className="simulation-header-subtitle">Bet:</p>
+          <h1 className="h1-sub">${bet}</h1>
+        </div>
+        <div className="header-block-wrap">
+          <p className="simulation-header-subtitle">Balance:</p>
+          <h1 className="h1-sub">${balance}</h1>
+        </div>
       </div>
 
-      <div className="dealer-area">
-        <div className="dealer-label">Dealer</div>
-        <div className="dealer-value">Value: {dealerHand.value}</div>
-        <div className="dealer-cards">
+      {!connected && (
+        <p className="trainer-connection-hint" role="status">
+          Connecting to game server…
+        </p>
+      )}
+
+      <div className="section-wrap section-wrap--trainer-hands">
+        <div className="section-block-wrap trainer-hand-panel">
+          <div className="trainer-hand-cards-row dealer-cards">
             {dealerHand.cards.map((c, i) => (
               <Card key={i} rank={c.rank} suit={c.suit} />
             ))}
             {dealerHand.faceDown && (
-              <img src="/cards/face-down.svg" alt="face-down" className="face-down-card" />
+              <img src="/cards/face-down.svg" alt="Face down" className="face-down-card" />
             )}
+          </div>
+          <div className="trainer-hand-footer">
+            <div className="section-block-title-wrap trainer-hand-heading">
+              <h1 className="h1-sub">Dealer</h1>
+              <p>Value: {dealerHand.value}</p>
+            </div>
+            <HandOutcomeBadge side="dealer" lastResult={lastResult} />
+          </div>
         </div>
-      </div>
 
-      <div className="table-center">
-        {/* Center message area (rules, scores) */}
-      </div>
-
-      <div className="player-area">
-        <div className="player-hands">
-          <div className="player-value">Value: {playerHand.value}</div>
-          <div className="hand-cards">
+        <div className="section-block-wrap trainer-hand-panel">
+          <div className="trainer-hand-cards-row hand-cards">
             {playerHand.cards.map((c, i) => (
               <Card key={i} rank={c.rank} suit={c.suit} />
             ))}
           </div>
-        </div>
-
-        <div className="controls">
-          <div className="control-left">
-            {actions.find(a => a.code === 's') && (
-              <button className="control-btn stand" onClick={() => sendAction('s')}>Stand</button>
-            )}
-            {actions.find(a => a.code === 'v') && (
-              <button className="control-btn split" onClick={() => sendAction('v')}>Split</button>
-            )}
+          <div className="trainer-hand-footer">
+            <div className="section-block-title-wrap trainer-hand-heading">
+              <h1 className="h1-sub">Player</h1>
+              <p>Value: {playerHand.value}</p>
+            </div>
+            <HandOutcomeBadge side="player" lastResult={lastResult} />
           </div>
-          <div className="control-right">
-            {actions.find(a => a.code === 'd') && (
-              <button className="control-btn double" onClick={() => sendAction('d')}>Double</button>
-            )}
-            {actions.find(a => a.code === 'h') && (
-              <button className="control-btn hit" onClick={() => sendAction('h')}>Hit</button>
-            )}
-          </div>
-        </div>
-
-        <div className="bet-controls">
-          {!editingBet ? (
-            <>
-              <button className="small-btn" onClick={startEditBet}>Edit Bet</button>
-              <button className="small-btn play" onClick={handlePlay} disabled={!connected || actions.length > 0}>Play</button>
-            </>
-          ) : (
-            <span className="bet-edit-row">
-              <input className="bet-edit-input" value={editBetValue} onChange={(e) => setEditBetValue(e.target.value)} />
-              <button className="small-btn" onClick={saveEditBet}>Save</button>
-            </span>
-          )}
         </div>
       </div>
-      
+
+      <div className="section-wrap section-wrap--trainer-options">
+        <div className="section-block-wrap trainer-options-bar">
+          <div className="section-block-title-wrap">
+            <h1 className="h1-sub">Your options</h1>
+          </div>
+          <div className="section-block-content-wrap trainer-options-actions">
+            {orderedActions.length > 0 ? (
+              orderedActions.map((a) => (
+                <button
+                  key={a.code}
+                  type="button"
+                  className={actionClass(a.code)}
+                  onClick={() => sendAction(a.code)}
+                >
+                  {actionLabel(a.code)}
+                </button>
+              ))
+            ) : (
+              <button
+                type="button"
+                className="run-btn trainer-play-btn"
+                onClick={handlePlay}
+                disabled={!connected}
+              >
+                Play
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {isBetBalanceModalOpen && (
+        <div className="simulation-modal-overlay" onClick={closeBetBalanceModal}>
+          <div className="simulation-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="simulation-modal-title">Edit Bet and Balance</h2>
+            <div className="simulation-modal-field">
+              <label className="simulation-label">Balance:</label>
+              <input
+                type="number"
+                className="simulation-input"
+                value={draftBalance}
+                onChange={(e) => setDraftBalance(e.target.value)}
+                placeholder={String(balance)}
+                min="1"
+              />
+            </div>
+            <div className="simulation-modal-field">
+              <label className="simulation-label">Bet Amount:</label>
+              <input
+                type="number"
+                className="simulation-input"
+                value={draftBetAmount}
+                onChange={(e) => setDraftBetAmount(e.target.value)}
+                placeholder={String(bet)}
+                min="1"
+              />
+            </div>
+            <div className="simulation-modal-actions">
+              <button type="button" className="run-btn" onClick={saveBetBalance}>
+                Save
+              </button>
+              <button type="button" className="cancel-btn" onClick={closeBetBalanceModal}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {lastResult && (
         <div className={`result-banner ${lastResult.outcome}`}>
           {lastResult.outcome === 'win' && <div>YOU WIN! (+{lastResult.profit})</div>}
