@@ -10,26 +10,39 @@ ACTION_MAP = {
     "d": "double",
     "v": "split"
 }
+# this will store generated quiz scenarios for reference when checking answers
+QUIZ_SCENARIOS = {}  
+# limit the number of stored scenarios to prevent memory issues; can be adjusted based on expected usage
+MAX_STORED_SCENARIOS = 50
+
 
 # this is what the API will call
 # returns scenario question aligning with what the frontend expects
 def generate_quiz_question():
     scenario = generate_quiz_scenario()
+    scenario_id = str(uuid.uuid4())
+    QUIZ_SCENARIOS[scenario_id] = scenario
+
+    # ensures we don't store too many scenarios in memory; removes the oldest scenario when we exceed the limit
+    if len(QUIZ_SCENARIOS) > MAX_STORED_SCENARIOS:
+        oldest_key = next(iter(QUIZ_SCENARIOS))
+        del QUIZ_SCENARIOS[oldest_key]
+
     return {
         # creates a id for each scenario
-        "scenarioId": str(uuid.uuid4()),
+        "scenarioId": scenario_id,
         "playerHand": scenario["player_hand"],
         "playerTotal": scenario["player_total"],
         "dealerUpcard": scenario["dealer_upcard"],
         "allowedActions": scenario["allowed_actions"],
-        "runningCount": 0,
-        "trueCount": 0,
+        ##"runningCount": 0,
+        ##"trueCount": 0,
         "strategy": "Basic Strategy",
         "rules": {
             "dealerHitsSoft17": False,
             "doubleAfterSplit": True
         },
-        "correctAction": get_correct_action(scenario)
+        # "correctAction": get_correct_action(scenario)
     }
 
 
@@ -128,3 +141,36 @@ def get_correct_action(scenario):
     
     # translates the action code from the strategy function into the actual action label we want to return to the frontend
     return ACTION_MAP[action_code]      
+
+# this section are functions that will be used to check the user's answer and provide feedback
+
+def check_quiz_answer(scenario_id, selected_action):
+    # retrieves the scenario data using the scenario_id
+    scenario = QUIZ_SCENARIOS.get(scenario_id)
+
+    if not scenario:
+        return {"isCorrect": False, 
+                "correctAction": None,
+                "feedback": "Scenario was not found. Please try again."}
+
+    correct_action = get_correct_action(scenario)
+    is_correct = (selected_action.lower() == correct_action.lower())
+
+    feedback = build_user_feedback(scenario, selected_action, correct_action)
+
+    return {
+        "isCorrect": is_correct,
+        "correctAction": correct_action,
+        "feedback": feedback
+    }
+
+# builds the feedback message to be returned to the user after they submit their answer, based on whether they were correct or not and what the correct action is for the scenario
+def build_user_feedback(scenario, selected_action, correct_action):
+    dealer_upcard = scenario["dealer_upcard"]
+    player_total = scenario["player_total"]
+
+    if selected_action.lower() == correct_action.lower():
+        return f"Your answer is correct! Basic strategy recommends {correct_action} for {player_total} against a dealer {dealer_upcard}."
+
+    return f"Your answer is incorrect. Basic strategy recommends {correct_action} for {player_total} against a dealer {dealer_upcard}."
+

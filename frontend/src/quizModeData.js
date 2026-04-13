@@ -6,8 +6,9 @@ export const mockQuizModeScenario = {
   playerTotal: 16,
   dealerUpcard: "10",
   allowedActions: ["hit", "stand", "split", "double"],
-  runningCount: 6,
-  trueCount: 2,
+  // add counts when we implement change in strategy. 
+  // runningCount: 6,
+  // trueCount: 2,
 
   // context that will come from dashboard (to be updated to reflect actual full rules scope and strategy used in the quiz)
   strategy: "Basic Strategy",
@@ -24,3 +25,21 @@ export const mockQuizModeResponse = {
   correctAction: "split",
   feedback: "Basic strategy recommends splitting 8s against a dealer 10.",
 };
+
+/* this should be helpful for testing the frontend integration with the backend quiz mode endpoints.
+
+# get quiz question
+const res = await fetch("/quiz-mode/question");
+const data = await res.json();
+
+# submit quiz answer
+await fetch("/quiz-mode/answer", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    scenarioId,
+    selectedAction: "hit"
+  })
+});
+
+*/
