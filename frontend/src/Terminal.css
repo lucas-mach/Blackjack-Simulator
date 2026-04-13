@@ -4,29 +4,15 @@
   font-family: 'Courier New', Courier, monospace;
   padding: 28px;
   border-radius: 10px;
-  position: fixed;
-  right: 60px;
-  left: auto;
-  top: 100px;
   width: min(760px, 92vw);
-  max-height: calc(100vh - 140px);
+  max-height: calc(100vh - 200px);
   overflow: auto;
   display: flex;
   flex-direction: column;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
   border: 1px solid var(--mid);
   text-align: left;
-}
-
-@media (max-width: 1100px) {
-  .terminal-container {
-    left: 50%;
-    transform: translateX(-50%);
-    right: auto;
-    width: 94vw;
-    top: 80px;
-    max-height: calc(100vh - 120px);
-  }
+  margin: 0 auto;
 }
 
 .terminal-output {
