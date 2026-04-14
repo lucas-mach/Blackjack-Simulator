@@ -1,5 +1,15 @@
 /* Training page: same layout primitives as Simulation; section height overrides */
 
+.trainer-wrap {
+  margin-left: 8rem;
+  padding: 1.25rem 1rem;
+  color: var(--light01);
+}
+
+.trainer-header {
+  text-align: left;
+}
+
 .section-wrap--trainer-hands {
   height: auto;
   align-items: stretch;

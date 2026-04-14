@@ -42,7 +42,6 @@ const Simulation = () => {
   const [numDecks, setNumDecks] = useState(8);
   const [graphUrl, setGraphUrl] = useState(null);
   const [isBetBalanceModalOpen, setIsBetBalanceModalOpen] = useState(false);
-  const [isStrategyModalOpen, setIsStrategyModalOpen] = useState(false);
   const [draftBalance, setDraftBalance] = useState('');
   const [draftBetAmount, setDraftBetAmount] = useState('');
 
@@ -322,7 +321,16 @@ const Simulation = () => {
           <h1 className="simulation-header-title">Simulate</h1>
           <p className="simulation-header-subtitle">Test Strategy Performance</p>
         </div>
-
+          <div className="header-block-wrap">
+            <button
+              type="button"
+              className="bet-edit-btn"
+              onClick={openBetBalanceModal}
+              aria-label="Edit bet and balance"
+            >
+              <span className="material-symbols-outlined bet-edit-icon">edit_square</span>
+            </button>
+          </div>
         <div className="header-block-wrap">
           <p className="simulation-header-subtitle">Bet:</p>
           <h1 className="h1-sub">${betAmount}</h1>
@@ -370,7 +378,24 @@ const Simulation = () => {
             <button className="run-btn" onClick={runRestSimulation}>
               Run Simulation
             </button>
-            <button type="button" className="results-btn" onClick={() => setShowStrategy(true)}>
+            <button
+              type="button"
+              className="strategy-btn"
+              onClick={() => {
+                if (stratRows.length === 0) {
+                  setStratRows(
+                    TCC_KEYS.map((t) => ({
+                      key: t.key,
+                      label: t.label,
+                      expanded: false,
+                      cells: { hard: {}, soft: {}, split: {} },
+                    }))
+                  );
+                  TCC_KEYS.forEach((t) => loadStrategyCache(t.key));
+                }
+                setShowStrategy(true);
+              }}
+            >
               Edit Strategy
             </button>
             <button className="graph-btn" onClick={() => setGraphUrl(`http://localhost:8000/graph?t=${new Date().getTime()}`)}>
@@ -378,19 +403,6 @@ const Simulation = () => {
             </button>
             <button className="results-btn" onClick={fetchResults}>
               View Results
-            </button>
-            <button className="strategy-btn" onClick={() => {
-              if (stratRows.length === 0) {
-                setStratRows(TCC_KEYS.map(t => ({
-                  key: t.key, label: t.label, expanded: false,
-                  cells: { hard: {}, soft: {}, split: {} },
-                  betMultiplier: betRamp[TCC_KEY_TO_RAMP_IDX[t.key]] ?? 1,
-                })));
-                TCC_KEYS.forEach(t => loadStrategyCache(t.key));
-              }
-              setIsStrategyModalOpen(true);
-            }}>
-              Edit Strategy
             </button>
           </div>
           <div className="results-link simulation-download-wrap">
@@ -797,145 +809,6 @@ const Simulation = () => {
               <button type="button" className="cancel-btn" onClick={closeBetBalanceModal}>
                 Cancel
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {isStrategyModalOpen && (
-        <div className="simulation-modal-overlay" onClick={() => setIsStrategyModalOpen(false)}>
-          <div className="simulation-modal simulation-modal--strategy" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <h2 className="simulation-modal-title">Strategy Editor</h2>
-              <button onClick={() => setIsStrategyModalOpen(false)}
-                style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1 }}>✕</button>
-            </div>
-            {/* Toolbar */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
-              <button onClick={restoreDefaults} style={TOOL_BTN}>Restore Defaults</button>
-              <button onClick={() => setStratRows([{ key: 'tcc_0_1', label: 'TCC 0–1 (base)', expanded: false, cells: { hard: {}, soft: {}, split: {} } }])}
-                style={TOOL_BTN}>Base Strategy Only</button>
-              <button onClick={() => setStratRows([])} style={{ ...TOOL_BTN, color: '#ff6b6b' }}>Clear All</button>
-              <button onClick={downloadStrategyConfig} style={{ ...TOOL_BTN, marginLeft: 'auto' }}>⬇ Download .bstrat</button>
-              <label style={{ ...TOOL_BTN, cursor: 'pointer' }}>⬆ Upload .bstrat
-                <input type="file" accept=".bstrat,.json" hidden onChange={uploadStrategyConfig} />
-              </label>
-            </div>
-            {/* Row list */}
-            <div style={{ overflowY: 'auto', flex: 1 }}>
-              {stratRows.length === 0 && (
-                <div style={{ color: '#555', fontSize: '0.85rem', padding: '8px 0' }}>
-                  No overrides configured — sim uses default Excel strategies. Click "Restore Defaults" or "+ Add Row".
-                </div>
-              )}
-              {stratRows.map((row, idx) => (
-                <div key={row.key} style={{ border: '1px solid #2a2a2a', borderRadius: '6px', marginBottom: '6px', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '5px 10px', background: '#161616', gap: '8px' }}>
-                    <button onClick={() => toggleRowExpanded(idx)}
-                      style={{ background: 'none', border: 'none', color: '#00ff9d', cursor: 'pointer', fontSize: '0.85rem', padding: 0, fontWeight: 'bold' }}>
-                      {row.expanded ? '▾' : '▸'} {row.label}
-                    </button>
-                    {['hard','soft','split'].some(tab => Object.keys(row.cells[tab]||{}).length > 0) &&
-                      <span style={{ fontSize: '0.68rem', color: '#f5a623' }}>✏ edited</span>}
-                    {/* Bet multiplier inline */}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '10px', color: '#666', fontSize: '0.75rem' }}>
-                      Bet×
-                      <input
-                        type="number" min="0" step="0.5"
-                        value={row.betMultiplier ?? 1}
-                        onClick={e => e.stopPropagation()}
-                        onChange={e => setStratRows(prev => prev.map((r, i) =>
-                          i !== idx ? r : { ...r, betMultiplier: Number(e.target.value) }
-                        ))}
-                        style={{ width: '48px', padding: '1px 4px', borderRadius: '3px', border: '1px solid #333', background: '#0d0d0d', color: '#ccc', fontSize: '0.75rem', textAlign: 'center' }}
-                      />
-                    </label>
-                    <button onClick={() => deleteStratRow(idx)}
-                      style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.8rem' }}>
-                      ✕ Remove
-                    </button>
-                  </div>
-                  {row.expanded && stratCache[row.key] && (() => {
-                    const d = stratCache[row.key];
-                    return (
-                      <div style={{ padding: '8px', overflowX: 'auto' }}>
-                        <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                          {['hard','soft','split'].map(tab => {
-                            const tbl = d[tab];
-                            const rLbls = d.row_labels[tab];
-                            const cLbls = d.col_labels;
-                            const cells = row.cells[tab] || {};
-                            const OPTS = tab === 'split' ? ['Y','N'] : ['H','S','D','DS','R','RS'];
-                            return (
-                              <div key={tab}>
-                                <div style={{ color: '#777', fontSize: '0.65rem', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>{tab}</div>
-                                <table style={{ borderCollapse: 'collapse', fontSize: '0.6rem' }}>
-                                  <thead>
-                                    <tr>
-                                      <th style={{ padding: '1px 3px', color: '#444' }}></th>
-                                      {cLbls.map(c => <th key={c} style={{ padding: '1px 2px', color: '#666', fontWeight: 'normal', minWidth: '26px' }}>{c}</th>)}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {tbl.map((tRow, ri) => (
-                                      <tr key={ri}>
-                                        <td style={{ padding: '1px 3px', color: '#777', fontWeight: 'bold', fontSize: '0.58rem', whiteSpace: 'nowrap' }}>{rLbls[ri]}</td>
-                                        {tRow.map((cell, ci) => {
-                                          const ck = `${ri},${ci}`;
-                                          const val = cells[ck] ?? (cell ? String(cell).toUpperCase() : 'H');
-                                          return (
-                                            <td key={ci} style={{ padding: '1px', backgroundColor: ACTION_COLORS[val] || '#1a1a1a' }}>
-                                              <select value={val} onChange={e => setCellValue(idx, tab, ck, e.target.value)}
-                                                style={{ background: 'transparent', border: 'none', color: '#ddd', fontSize: '0.6rem', cursor: 'pointer', width: '26px', padding: 0 }}>
-                                                {OPTS.map(o => <option key={o} value={o} style={{ background: '#1a1a1a' }}>{o}</option>)}
-                                              </select>
-                                            </td>
-                                          );
-                                        })}
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  {row.expanded && !stratCache[row.key] && (
-                    <div style={{ padding: '8px', color: '#555', fontSize: '0.8rem' }}>Loading strategy data…</div>
-                  )}
-                </div>
-              ))}
-              {/* Add Row */}
-              <div style={{ marginTop: '8px' }}>
-                {!showAddRow ? (
-                  <button onClick={() => setShowAddRow(true)}
-                    style={{ background: 'none', border: '1px dashed #333', color: '#555', cursor: 'pointer', fontSize: '0.82rem', padding: '4px 12px', borderRadius: '4px' }}>
-                    + Add Strategy Row
-                  </button>
-                ) : (
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', padding: '8px 10px', background: '#161616', borderRadius: '6px', border: '1px solid #2a2a2a' }}>
-                    <label style={{ color: '#888', fontSize: '0.78rem' }}>Level:</label>
-                    <select value={addRowKey} onChange={e => setAddRowKey(e.target.value)}
-                      style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff', fontSize: '0.78rem' }}>
-                      {TCC_KEYS.filter(t => !stratRows.find(r => r.key === t.key)).map(t => (
-                        <option key={t.key} value={t.key}>{t.label}</option>
-                      ))}
-                    </select>
-                    <label style={{ color: '#888', fontSize: '0.78rem' }}>Copy from:</label>
-                    <select value={addRowFrom} onChange={e => setAddRowFrom(e.target.value)}
-                      style={{ padding: '2px 6px', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff', fontSize: '0.78rem' }}>
-                      {TCC_KEYS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-                    </select>
-                    <button onClick={addStratRow}
-                      style={{ padding: '3px 10px', borderRadius: '4px', background: '#00ff9d', color: '#000', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 'bold' }}>Add</button>
-                    <button onClick={() => setShowAddRow(false)}
-                      style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.78rem' }}>Cancel</button>
-                  </div>
-                )}
-              </div>
-              {stratLoading && <div style={{ color: '#777', fontSize: '0.78rem', marginTop: '4px' }}>Loading strategy data…</div>}
             </div>
           </div>
         </div>
