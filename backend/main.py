@@ -108,7 +108,7 @@ class SimRequest(BaseModel):
     bet_amount: int = 10
     num_decks: int = 8
     # Optional simulation overrides
-    bet_ramp: Optional[List[float]] = None          # 7 multipliers: [le0, 1, 2, 3, 4, 5, ge6]
+    bet_ramp: Optional[List[float]] = None          # 11 multipliers, one per TCC: [tcc_8plus, tcc_7, ..., tcc_under_neg2]
     strategy_overrides: Optional[Dict[str, dict]] = None  # {tcc_key: {hard:[[r,c,v],...], ...}}
     insurance_threshold: Optional[float] = None    # take insurance when TCC >= this value
     use_base_strategy_only: bool = False           # ignore TCC deviations, always use tcc_0_1

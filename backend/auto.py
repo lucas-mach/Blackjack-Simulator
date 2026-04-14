@@ -295,15 +295,15 @@ class AutoGame:
 
             true_card_count = card_count / (len(deck.cards)/52) if len(deck.cards) > 0 else 0
 
-            # Custom bet ramp: list of 7 multipliers [le0, 1, 2, 3, 4, 5, ge6]
-            if bet_ramp and len(bet_ramp) >= 7:
-                tcc_int = int(true_card_count)
-                if tcc_int <= 0:
-                    mult = bet_ramp[0]
-                elif tcc_int >= 6:
-                    mult = bet_ramp[6]
-                else:
-                    mult = bet_ramp[min(tcc_int, 5)]
+            # Custom bet ramp: 11 multipliers, one per TCC level in descending order:
+            # [tcc_8plus, tcc_7, tcc_6, tcc_5, tcc_4, tcc_3, tcc_2, tcc_0_1, tcc_neg1, tcc_neg2, tcc_under_neg2]
+            if bet_ramp and len(bet_ramp) >= 11:
+                slot = 10  # default: lowest slot (tcc_under_neg2)
+                for idx_r, (_, threshold) in enumerate(_TCC_KEY_THRESHOLDS):
+                    if true_card_count >= threshold:
+                        slot = idx_r
+                        break
+                mult = bet_ramp[slot]
             else:
                 mult = AutoGame.determine_bet_multiple(true_card_count)
             base_bet = bet_amount * mult

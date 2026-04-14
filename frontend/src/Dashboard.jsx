@@ -36,7 +36,7 @@ const Dashboard = () => {
     }
   };
 
-  useEffect(() => {
+  const loadSims = () => {
     const saved = localStorage.getItem('blackjackSimResults');
     if (saved) {
       try {
@@ -46,6 +46,15 @@ const Dashboard = () => {
         console.error('Failed to parse saved sims', e);
       }
     }
+  };
+
+  useEffect(() => {
+    loadSims();
+    const onStorage = (e) => {
+      if (e.key === 'blackjackSimResults') loadSims();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const updateRule = (key, value) => {
