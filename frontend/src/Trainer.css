@@ -1,11 +1,18 @@
-.trainer-wrap {
-  padding: 2rem;
+/* Training page: same layout primitives as Simulation; section height overrides */
+
+.section-wrap--trainer-hands {
+  height: auto;
+  align-items: stretch;
+  margin-bottom: 1rem;
 }
 
-.trainer-header {
-  text-align: center;
+.section-wrap--trainer-options {
+  height: auto;
   margin-bottom: 1rem;
-  color: var(--light02);
+}
+
+.section-wrap--trainer-options .section-block-wrap {
+  height: auto;
 }
 
 .trainer-subtitle {

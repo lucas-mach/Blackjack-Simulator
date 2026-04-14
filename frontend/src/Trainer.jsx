@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import Terminal from './Terminal';
+import './App.css';
+import './Simulation.css';
 import QuizMode from './QuizMode';
 import './Trainer.css';
 
@@ -8,9 +10,7 @@ const Trainer = () => {
   const [handCount, setHandCount] = useState(1);
 
   const handleGameComplete = () => {
-    setHandCount(prev => prev + 1);
-    // NOTE: Do NOT change Terminal's key here — that would remount the component
-    // and open a new WebSocket, resetting the backend game session and balance.
+    setHandCount((prev) => prev + 1);
   };
 
   if (mode === null) {
@@ -45,12 +45,8 @@ const Trainer = () => {
   }
 
   return (
-    <div className="trainer-wrap">
-      <div className="trainer-header">
-        <h2>Blackjack Trainer - Hand {handCount}</h2>
-        <button className="trainer-back-btn" onClick={() => setMode(null)}>← Back to modes</button>
-      </div>
-      <Terminal autoSelect={true} onGameComplete={handleGameComplete} />
+    <div className="app-container simulation-root">
+      <Terminal autoSelect={true} handCount={handCount} onGameComplete={handleGameComplete} />
     </div>
   );
 };

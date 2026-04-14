@@ -5,6 +5,19 @@
   box-sizing: border-box;
 }
 
+.simulation-header-title {
+  margin: 0 0 -0.25rem 0;
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  color: var(--light01);
+}
+
+.simulation-header-subtitle {
+  font-size: var(--font-size-body);
+  color: var(--light02);
+  margin: 0;
+}
+
 .header-wrap {
   text-align: left;
   margin-bottom: 1.5rem;
@@ -43,10 +56,18 @@
 .section-wrap {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 1rem;
-  height: 13rem;
+  min-height: 13rem;
+  height: auto;
   margin-bottom: 1rem;
+}
+
+/* Top row: Options + Control — equal width and equal height */
+.section-wrap:not(.section-wrap--results) > .section-block-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
 }
 
 .section-wrap--results {
@@ -62,11 +83,6 @@
   border: 2px solid var(--mid);
   border-radius: 1.5rem;
   background-color: var(--dark02);
-  height: 100%;
-}
-
-.controls {
-  width: 100%;
 }
 
 .section-block-wrap.results {
@@ -218,6 +234,134 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.simulation-modal--strategy {
+  width: min(96vw, 72rem);
+  max-width: 1200px;
+  max-height: min(90vh, 900px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* Prevent flex children (TCC rows) from shrinking below their content */
+  align-items: stretch;
+}
+
+.simulation-modal--strategy .simulation-strategy-tcc-row {
+  flex-shrink: 0;
+}
+
+.simulation-strategy-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.simulation-strategy-modal-head .simulation-modal-title {
+  margin: 0;
+  color: var(--accent02);
+}
+
+.simulation-strategy-modal-close {
+  border: none;
+  background: transparent;
+  color: var(--light02);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.simulation-strategy-modal-close:hover {
+  color: var(--light01);
+}
+
+.simulation-strategy-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.simulation-strategy-toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 0.5rem;
+}
+
+/* Strategy modal: override global pill buttons so labels stay visible on dark rows */
+.simulation-modal--strategy .simulation-strategy-toolbar-btn {
+  padding: 3px 10px !important;
+  font-size: 0.78rem !important;
+  border-radius: 4px !important;
+  border: 1px solid #444 !important;
+  background: #222 !important;
+  color: #aaa !important;
+  cursor: pointer !important;
+}
+
+.simulation-modal--strategy .simulation-strategy-toolbar-btn--danger {
+  color: #ff6b6b !important;
+}
+
+.simulation-modal--strategy .simulation-strategy-tcc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #161616;
+  flex-shrink: 0;
+}
+
+.simulation-modal--strategy .simulation-strategy-tcc-toggle {
+  margin: 0 !important;
+  padding: 0.35rem 0.5rem !important;
+  border-radius: 4px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--accent02) !important;
+  font-size: 0.9rem !important;
+  line-height: 1.35 !important;
+  font-weight: 600 !important;
+  text-align: left !important;
+  white-space: normal !important;
+  cursor: pointer !important;
+  min-height: 2.25rem;
+  align-self: stretch;
+}
+
+.simulation-modal--strategy .simulation-strategy-row-remove {
+  margin-left: auto !important;
+  padding: 0.35rem 0.65rem !important;
+  border-radius: 4px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #888 !important;
+  font-size: 0.85rem !important;
+  line-height: 1.35 !important;
+  min-height: 2.25rem;
+  flex-shrink: 0;
+}
+
+.simulation-modal--strategy .simulation-strategy-row-remove:hover {
+  color: var(--light01) !important;
+}
+
+.simulation-modal--strategy label.simulation-strategy-upload-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px !important;
+  font-size: 0.78rem !important;
+  border-radius: 4px !important;
+  border: 1px solid #444 !important;
+  background: #222 !important;
+  color: #aaa !important;
+  cursor: pointer !important;
 }
 
 .simulation-modal-title {
