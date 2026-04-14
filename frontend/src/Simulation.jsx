@@ -368,7 +368,11 @@ const Simulation = () => {
             </button>
             <button className="strategy-btn" onClick={() => {
               if (stratRows.length === 0) {
-                setStratRows(TCC_KEYS.map(t => ({ key: t.key, label: t.label, expanded: false, cells: { hard: {}, soft: {}, split: {} } })));
+                setStratRows(TCC_KEYS.map(t => ({
+                  key: t.key, label: t.label, expanded: false,
+                  cells: { hard: {}, soft: {}, split: {} },
+                  betMultiplier: betRamp[TCC_KEY_TO_RAMP_IDX[t.key]] ?? 1,
+                })));
                 TCC_KEYS.forEach(t => loadStrategyCache(t.key));
               }
               setIsStrategyModalOpen(true);
