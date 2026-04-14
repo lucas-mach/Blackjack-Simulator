@@ -268,3 +268,22 @@
   background-color: var(--dark01);
   color: var(--light01);
 }
+
+.strategy-btn {
+  background-color: var(--dark02);
+  border: 2px solid #7c5cbf;
+  color: #b89fe8;
+}
+
+.strategy-btn:hover {
+  background-color: #2a1f40;
+  color: #d4beff;
+}
+
+/* Wide modal for Strategy Editor */
+.simulation-modal--strategy {
+  width: min(95vw, 900px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
