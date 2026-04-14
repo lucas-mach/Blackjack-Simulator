@@ -14,3 +14,70 @@
 .section-wrap--trainer-options .section-block-wrap {
   height: auto;
 }
+
+.trainer-subtitle {
+  color: var(--light02);
+  margin-top: 0.25rem;
+}
+
+.trainer-back-btn {
+  background: transparent;
+  color: var(--light02);
+  border: 2px solid var(--mid);
+  padding: 0.35rem 1rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.trainer-back-btn:hover {
+  border-color: var(--light01);
+  color: var(--light01);
+}
+
+/* Mode selection */
+.trainer-mode-select {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.trainer-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--dark03);
+  border: 2px solid var(--mid);
+  border-radius: 1.5rem;
+  padding: 2.5rem 2rem;
+  width: 260px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--light01);
+}
+
+.trainer-mode-btn:hover {
+  border-color: var(--accent02);
+  transform: translateY(-2px);
+}
+
+.trainer-mode-icon {
+  font-size: 2.5rem;
+  color: var(--accent02);
+}
+
+.trainer-mode-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.trainer-mode-desc {
+  font-size: 0.85rem;
+  color: var(--light02);
+  text-align: center;
+  line-height: 1.4;
+}

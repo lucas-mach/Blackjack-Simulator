@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from console import ConsoleGame
 from auto import AutoGame
+from quizMode import generate_quiz_question, check_quiz_answer
 import threading
 import queue
 import asyncio
@@ -175,7 +176,25 @@ def get_graph():
         }
     )
 
+# quiz mode endpoint: generates question for the frontend!
+@app.get("/quiz-mode/question")
+def get_quiz_mode_question():
+    scenario = generate_quiz_question()
+    # remove the correct action from the response
+    # scenario.pop("correct_action", None)
+    return scenario
 
+# quiz mode endpoint: receives user's answer and checks if it's correct, then returns feedback
+@app.post("/quiz-mode/answer")
+def submit_quiz_mode_answer(body: dict = Body(...)):
+    scenario_id = body.get("scenarioId")
+    selected_action = body.get("selectedAction")
+ 
+    # prevents breaking from bad requests
+    if not scenario_id or not selected_action:
+        raise HTTPException(status_code=400, detail="Missing scenarioId or selectedAction")
+    
+    return check_quiz_answer(scenario_id, selected_action)
 
 
 
