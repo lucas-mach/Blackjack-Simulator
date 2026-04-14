@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import './Simulation.css';
 
@@ -17,15 +17,9 @@ const TCC_KEYS = [
   { key: 'tcc_under_neg2', label: 'TCC < −2'   },
 ];
 
-const DEFAULT_BET_RAMP = [1, 2, 4, 6, 8, 10, 12];
-const BET_RAMP_LABELS  = ['≤ 0', '1', '2', '3', '4', '5', '≥ 6'];
-
-// Maps each TCC strategy key to its index in the 7-slot bet ramp array
-const TCC_KEY_TO_RAMP_IDX = {
-  tcc_under_neg2: 0, tcc_neg2: 0, tcc_neg1: 0, tcc_0_1: 0,
-  tcc_2: 2, tcc_3: 3, tcc_4: 4, tcc_5: 5,
-  tcc_6: 6, tcc_7: 6, tcc_8plus: 6,
-};
+// Default bet multipliers — one per TCC level, same order as TCC_KEYS:
+// [tcc_8plus, tcc_7, tcc_6, tcc_5, tcc_4, tcc_3, tcc_2, tcc_0_1, tcc_neg1, tcc_neg2, tcc_under_neg2]
+const DEFAULT_BET_RAMP = [12, 12, 12, 10, 8, 6, 4, 1, 1, 1, 1];
 
 // Cell colour coding
 const ACTION_COLORS = {
@@ -51,13 +45,24 @@ const Simulation = () => {
   const [betRamp, setBetRamp] = useState([...DEFAULT_BET_RAMP]);
   const [showBetRamp, setShowBetRamp] = useState(false);
   const [showStrategy, setShowStrategy] = useState(false);
-  // New row-based strategy editor state
-  const [stratRows, setStratRows] = useState([]);       // [{key, label, expanded, cells:{hard,soft,split}}]
+  // New row-based strategy editor state — persisted to localStorage
+  const [stratRows, setStratRows] = useState(() => {
+    try {
+      const saved = localStorage.getItem('blackjackStratRows');
+      if (saved) return JSON.parse(saved).map(r => ({ ...r, expanded: false }));
+    } catch {}
+    return [];
+  });       // [{key, label, expanded, cells:{hard,soft,split}, betMultiplier}]
   const [stratCache, setStratCache] = useState({});     // {tcc_key: raw backend data}
   const [stratLoading, setStratLoading] = useState(false);
   const [showAddRow, setShowAddRow] = useState(false);
   const [addRowKey, setAddRowKey] = useState('tcc_0_1');
   const [addRowFrom, setAddRowFrom] = useState('tcc_0_1');
+
+  // Persist stratRows whenever it changes
+  useEffect(() => {
+    localStorage.setItem('blackjackStratRows', JSON.stringify(stratRows));
+  }, [stratRows]);
 
   const loadStrategyCache = async (tcc_key) => {
     if (stratCache[tcc_key]) return stratCache[tcc_key];
@@ -86,7 +91,8 @@ const Simulation = () => {
     const srcRow = stratRows.find(r => r.key === addRowFrom);
     const newCells = srcRow ? JSON.parse(JSON.stringify(srcRow.cells)) : { hard: {}, soft: {}, split: {} };
     const newLabel = TCC_KEYS.find(t => t.key === addRowKey)?.label || addRowKey;
-    const newMult = betRamp[TCC_KEY_TO_RAMP_IDX[addRowKey]] ?? 1;
+    const newIdx = TCC_KEYS.findIndex(t => t.key === addRowKey);
+    const newMult = betRamp[newIdx] ?? 1;
     setStratRows(prev => {
       const order = TCC_KEYS.map(t => t.key);
       const all = [...prev, { key: addRowKey, label: newLabel, expanded: true, cells: newCells, betMultiplier: newMult }];
@@ -105,11 +111,12 @@ const Simulation = () => {
   };
 
   const restoreDefaults = async () => {
-    const rows = TCC_KEYS.map((t) => ({
+    const rows = TCC_KEYS.map((t, i) => ({
       key: t.key,
       label: t.label,
       expanded: false,
       cells: { hard: {}, soft: {}, split: {} },
+      betMultiplier: betRamp[i] ?? 1,
     }));
     setStratRows(rows);
     setStratLoading(true);
@@ -136,7 +143,7 @@ const Simulation = () => {
   };
 
   const downloadStrategyConfig = () => {
-    const cfg = { version: 1, stratRows: stratRows.map(r => ({ key: r.key, label: r.label, cells: r.cells })) };
+    const cfg = { version: 1, stratRows: stratRows.map(r => ({ key: r.key, label: r.label, cells: r.cells, betMultiplier: r.betMultiplier })) };
     const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'blackjack-strategy.bstrat' });
     a.click(); URL.revokeObjectURL(a.href);
@@ -148,7 +155,10 @@ const Simulation = () => {
     reader.onload = (ev) => {
       try {
         const cfg = JSON.parse(ev.target.result);
-        const rows = (cfg.stratRows || []).map(r => ({ ...r, expanded: false }));
+        const rows = (cfg.stratRows || []).map(r => {
+          const idx = TCC_KEYS.findIndex(t => t.key === r.key);
+          return { ...r, expanded: false, betMultiplier: r.betMultiplier ?? betRamp[idx] ?? 1 };
+        });
         setStratRows(rows);
         rows.forEach(r => loadStrategyCache(r.key));
       } catch { alert('Invalid .bstrat file.'); }
@@ -188,14 +198,12 @@ const Simulation = () => {
 
     setOutput('Running REST simulation...');
 
-    // Build effective bet ramp: start from global betRamp, then overlay
-    // per-row multipliers from the strategy editor (last-writer-wins per slot)
-    const effectiveBetRamp = [...betRamp];
-    stratRows.forEach(row => {
-      const idx = TCC_KEY_TO_RAMP_IDX[row.key];
-      if (idx !== undefined && row.betMultiplier !== undefined) {
-        effectiveBetRamp[idx] = row.betMultiplier;
-      }
+    // Build effective bet ramp: 11 values in TCC_KEYS order.
+    // Each stratRow stores its own betMultiplier; if stratRows is populated
+    // use those, otherwise fall back to the global betRamp defaults.
+    const effectiveBetRamp = TCC_KEYS.map((t, i) => {
+      const row = stratRows.find(r => r.key === t.key);
+      return row?.betMultiplier ?? betRamp[i] ?? 1;
     });
 
     const res = await fetch('http://localhost:8000/simulate', {
@@ -259,7 +267,12 @@ const Simulation = () => {
     };
 
     const existing = JSON.parse(localStorage.getItem('blackjackSimResults') || '[]');
-    localStorage.setItem('blackjackSimResults', JSON.stringify([...existing, simResult]));
+    const updated = JSON.stringify([...existing, simResult]);
+    localStorage.setItem('blackjackSimResults', updated);
+    // Notify Dashboard if it's mounted in another tab or the same page
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'blackjackSimResults', newValue: updated, storageArea: localStorage,
+    }));
 
   } catch (err) {
     console.error('Simulation error:', err);  // log full error to console
@@ -382,17 +395,17 @@ const Simulation = () => {
               type="button"
               className="strategy-btn"
               onClick={() => {
-                if (stratRows.length === 0) {
-                  setStratRows(
-                    TCC_KEYS.map((t) => ({
-                      key: t.key,
-                      label: t.label,
-                      expanded: false,
-                      cells: { hard: {}, soft: {}, split: {} },
-                    }))
-                  );
-                  TCC_KEYS.forEach((t) => loadStrategyCache(t.key));
-                }
+              if (stratRows.length < TCC_KEYS.length) {
+                const newRows = TCC_KEYS.map((t, i) => ({
+                  key: t.key,
+                  label: t.label,
+                  expanded: false,
+                  cells: { hard: {}, soft: {}, split: {} },
+                  betMultiplier: betRamp[i] ?? 1,
+                }));
+                setStratRows(newRows);
+                TCC_KEYS.forEach((t) => loadStrategyCache(t.key));
+              }
                 setShowStrategy(true);
               }}
             >
@@ -559,6 +572,22 @@ const Simulation = () => {
                     ✕ Remove
                   </button>
                 </div>
+                {row.expanded && (
+                  <div style={{ padding: '6px 14px', background: '#111', borderBottom: '1px solid #222', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ color: '#555', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      Bet multiplier:
+                      <input
+                        type="number" min="0" step="0.5"
+                        value={row.betMultiplier ?? 1}
+                        onChange={(e) => setStratRows((prev) => prev.map((r, i) =>
+                          i !== idx ? r : { ...r, betMultiplier: Number(e.target.value) }
+                        ))}
+                        style={{ width: '52px', padding: '2px 6px', borderRadius: '3px', border: '1px solid #2a2a2a', background: '#0d0d0d', color: '#aaa', fontSize: '0.78rem', textAlign: 'center' }}
+                      />
+                      <span style={{ color: '#444', fontSize: '0.72rem' }}>× base bet</span>
+                    </label>
+                  </div>
+                )}
                 {row.expanded &&
                   stratCache[row.key] &&
                   (() => {
